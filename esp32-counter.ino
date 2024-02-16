@@ -2,7 +2,7 @@
 #include <Adafruit_SH110X.h>
 #include <numeric>
 #include <initializer_list>
-#include <vector>
+#include <string.h>
 
 /* Uncomment the initialize the I2C address , uncomment only one, If you get a totally blank screen try the other*/
 #define i2c_Address 0x3c //initialize with the I2C addr 0x3C Typically eBay OLED's
@@ -18,7 +18,9 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 #define YPOS 1
 #define DELTAY 2
 
-#define SENSOR_PIN 12
+#define SENSOR_PIN_LEFT 12
+#define SENSOR_PIN_MIDDLE 12
+#define SENSOR_PIN_RIGHT 12
 #define NUM_SAMPLES 10
 
 #define LOGO16_GLCD_HEIGHT 16
@@ -52,13 +54,17 @@ static const unsigned char PROGMEM logo16_glcd_bmp[] =
  * when button is pressed, but did not reach any milestone yet, it has state 0
  * each reached milestone increases state counter by 1
  */
+template <int NUM_MILESTONES>
 class ButtonState {
   int state;
   int last_press_time;
   int last_update_time;
-  std::vector<int> milestones;
+  int milestones[NUM_MILESTONES];
 public:
-  ButtonState(std::initializer_list<int> milestones) : state(-1), last_press_time(0), last_update_time(0), milestones(milestones) {}
+  ButtonState(std::initializer_list<int> milestones_time) : state(-1), last_press_time(0), last_update_time(0) {
+    assert(milestones_time.size() == NUM_MILESTONES);
+    std::copy(milestones_time.begin(), milestones_time.end(), milestones);
+  }
 
   void reset() {
     state = -1;
@@ -78,7 +84,7 @@ public:
       state = 0;
     }
     int elapsed = timestamp - last_press_time;
-    while (state < milestones.size() && elapsed >= milestones[state])
+    while (state < NUM_MILESTONES && elapsed >= milestones[state])
       state++;
     return -1;
   }
@@ -96,30 +102,34 @@ public:
   float getProgress() {
     if (state == -1)
       return 0.0f;
-    float maxTime = milestones.back();
+    float maxTime = milestones[NUM_MILESTONES - 1];
     float progress = (last_update_time - last_press_time) / maxTime;
     return std::min(progress, 1.0f);
   }
 };
 
-class TwoStateButtonWidget {
+class ThreeStateButtonWidget {
   int off_x;
   int off_y;
   const char *short_press_text;
   const char *long_press_text;
   int control_pin_no;
-  ButtonState state;
+  ButtonState<2> state;
 public:
-  TwoStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({300, 2000}) {
+  ThreeStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({100, 1500}) {
   }
 
-  void reset(int offset_x, int offset_y, const char *short_press_label, const char *long_press_label, int control_pin) {
+  void initialize(int offset_x, int offset_y, const char *short_press_label, const char *long_press_label, int control_pin) {
     off_x = offset_x;
     off_y = offset_y;
     short_press_text = short_press_label;
     long_press_text = long_press_label;
     control_pin_no = control_pin;
     pinMode(control_pin_no, INPUT_PULLUP);
+    state.reset();
+  }
+
+  void reset() {
     state.reset();
   }
 
@@ -133,29 +143,82 @@ public:
   void draw() {
     // draw labels
     int s = state.getState();
+    constexpr int second_part_offset = 0;
     display.setTextColor(SH110X_WHITE);
+    int short_press_length = strlen(short_press_text) * 6;
+    int long_press_length = strlen(long_press_text) * 6;
+    int first_part_length = short_press_length + 6;
     display.setCursor(off_x, off_y);
-    if (s == 1)
-      display.setTextSize(2);
-    else 
-      display.setTextSize(1);
-    display.println(short_press_text);
-    if (s == 2)
-      display.setTextSize(2);
-    else 
-      display.setTextSize(1);
-    display.println(long_press_text);
     display.setTextSize(1);
-    display.print("progress");
-    display.println(state.getTimeFromPress());
+    display.print(short_press_text);
+    display.print("/");
+    display.setCursor(off_x + first_part_length, off_y + second_part_offset);
+    display.print(long_press_text);
+
+    if (s == 1)
+      display.drawFastHLine(off_x, off_y + 8, short_press_length, SH110X_WHITE);
+    if (s == 2)
+      display.drawFastHLine(off_x + first_part_length, off_y + second_part_offset + 8, long_press_length, SH110X_WHITE);
     // draw progress bar
+    float progress = state.getProgress();
+    if (progress > 0.0f) {
+      int full_length = first_part_length + long_press_length;
+      int progress_bar_len = full_length * progress;
+      display.drawFastHLine(off_x, off_y + second_part_offset + 10, progress_bar_len, SH110X_WHITE);
+    }
   }
 };
 
-TwoStateButtonWidget test_button;
+class TwoStateButtonWidget {
+  int off_x;
+  int off_y;
+  const char *press_text;
+  int control_pin_no;
+  ButtonState<1> state;
+public:
+  TwoStateButtonWidget() : off_x(0), off_y(0), press_text(nullptr), control_pin_no(-1), state({100}) {
+  }
 
-void setup()   {
-  test_button.reset(20, 20, "test 1", "test 2", SENSOR_PIN);
+  void initialize(int offset_x, int offset_y, const char *press_label, int control_pin) {
+    off_x = offset_x;
+    off_y = offset_y;
+    press_text = press_label;
+    control_pin_no = control_pin;
+    pinMode(control_pin_no, INPUT_PULLUP);
+    state.reset();
+  }
+
+  void reset() {
+    state.reset();
+  }
+
+  void update() {
+    bool pin_state = digitalRead(control_pin_no);
+    int timestamp = esp_timer_get_time() / 1000;
+    int event = state.updateState(timestamp, !pin_state);
+    // todo callback on release
+  }
+
+  void draw() {
+    int s = state.getState();
+    display.setTextColor(SH110X_WHITE);
+    int press_text_length = strlen(press_text) * 6;
+    display.setCursor(off_x, off_y);
+    display.setTextSize(1);
+    display.print(press_text);
+    if (s == 1)
+      display.drawFastHLine(off_x, off_y + 8, press_text_length, SH110X_WHITE);
+  }
+};
+
+ThreeStateButtonWidget plus_minus_1;
+ThreeStateButtonWidget plus_minus_5;
+TwoStateButtonWidget menu;
+
+void setup() {
+  plus_minus_1.initialize(0, SCREEN_HEIGHT-11, "+1", "-1", SENSOR_PIN_LEFT);
+  plus_minus_5.initialize(SCREEN_WIDTH/2 - 15, SCREEN_HEIGHT-11, "+5", "-5", SENSOR_PIN_MIDDLE);
+  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT);
   Serial.begin(9600);
 
   // Show image buffer on the display hardware.
@@ -172,36 +235,16 @@ void setup()   {
 }
 
 void loop() {
-//  static int samples[NUM_SAMPLES] = {};
-//  static int cur_sample = 0;
-//  int raw_value = analogRead(SENSOR_PIN);
-//  samples[cur_sample] = raw_value;
-//  cur_sample = (cur_sample + 1) % NUM_SAMPLES;
-//
-//  auto avg_value = std::accumulate(std::begin(samples), std::end(samples), 0) / NUM_SAMPLES;
-//  float voltage = 3.3 / (2 << 11) * avg_value;
+  // update state
+  plus_minus_1.update();
+  plus_minus_5.update();
+  menu.update();
 
-  // Clear the buffer.
-  test_button.update();
+  // draw interface  
   display.clearDisplay();
-
-  test_button.draw();
-  bool pin_state = digitalRead(SENSOR_PIN);
-  if (pin_state)
-    display.print("pull up");
-  else
-    display.print("pull down");
-//  display.setTextSize(1);
-//  display.setTextColor(SH110X_WHITE);
-//  display.setCursor(0, 0);
-//  display.print("Current voltage: ");
-/////  display.setTextColor(SH110X_BLACK, SH110X_WHITE); // 'inverted' text
-//  display.println(voltage);
-//  display.print("raw value: ");
-//  display.println(raw_value);
-////  display.setTextSize(2);
-////  display.setTextColor(SH110X_WHITE);
-////  display.print("0x"); display.println(0xDEADBEEF, HEX);
+  plus_minus_1.draw();
+  plus_minus_5.draw();
+  menu.draw();
   display.display();
 }
 
