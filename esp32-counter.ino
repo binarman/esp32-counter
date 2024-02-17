@@ -2,25 +2,19 @@
 #include <Adafruit_SH110X.h>
 #include <numeric>
 #include <initializer_list>
+#include <functional>
 #include <string.h>
 
-/* Uncomment the initialize the I2C address , uncomment only one, If you get a totally blank screen try the other*/
-#define i2c_Address 0x3c //initialize with the I2C addr 0x3C Typically eBay OLED's
-//#define i2c_Address 0x3d //initialize with the I2C addr 0x3D Typically Adafruit OLED's
+#define i2c_Address 0x3c
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define OLED_RESET -1   //   QT-PY / XIAO
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define NUMFLAKES 10
-#define XPOS 0
-#define YPOS 1
-#define DELTAY 2
-
 #define SENSOR_PIN_LEFT 12
-#define SENSOR_PIN_MIDDLE 12
-#define SENSOR_PIN_RIGHT 12
+#define SENSOR_PIN_MIDDLE 27
+#define SENSOR_PIN_RIGHT 14
 
 /**
  * @brief abstract class controlling button state
@@ -91,7 +85,7 @@ public:
   virtual void reset() = 0;
   virtual void update() = 0;
   virtual void draw() = 0;
-}
+};
 
 class ThreeStateButtonWidget: public Widget {
   int off_x;
@@ -100,11 +94,12 @@ class ThreeStateButtonWidget: public Widget {
   const char *long_press_text;
   int control_pin_no;
   ButtonState<2> state;
+  std::function<void(int)> on_release;
 public:
-  ThreeStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({100, 1500}) {
+  ThreeStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({100, 1000}) {
   }
 
-  void initialize(int offset_x, int offset_y, const char *short_press_label, const char *long_press_label, int control_pin) {
+  void initialize(int offset_x, int offset_y, const char *short_press_label, const char *long_press_label, int control_pin, const std::function<void(int)> &callback) {
     off_x = offset_x;
     off_y = offset_y;
     short_press_text = short_press_label;
@@ -112,6 +107,7 @@ public:
     control_pin_no = control_pin;
     pinMode(control_pin_no, INPUT_PULLUP);
     state.reset();
+    on_release = callback;
   }
 
   void reset() override{
@@ -122,7 +118,7 @@ public:
     bool pin_state = digitalRead(control_pin_no);
     int timestamp = esp_timer_get_time() / 1000;
     int event = state.updateState(timestamp, !pin_state);
-    // todo callback on release
+    on_release(event);
   }
 
   void draw() override{
@@ -160,17 +156,19 @@ class TwoStateButtonWidget: public Widget {
   const char *press_text;
   int control_pin_no;
   ButtonState<1> state;
+  std::function<void(int)> on_release;
 public:
   TwoStateButtonWidget() : off_x(0), off_y(0), press_text(nullptr), control_pin_no(-1), state({100}) {
   }
 
-  void initialize(int offset_x, int offset_y, const char *press_label, int control_pin) {
+  void initialize(int offset_x, int offset_y, const char *press_label, int control_pin, const std::function<void(int)> callback) {
     off_x = offset_x;
     off_y = offset_y;
     press_text = press_label;
     control_pin_no = control_pin;
     pinMode(control_pin_no, INPUT_PULLUP);
     state.reset();
+    on_release = callback;
   }
 
   void reset() override{
@@ -181,7 +179,7 @@ public:
     bool pin_state = digitalRead(control_pin_no);
     int timestamp = esp_timer_get_time() / 1000;
     int event = state.updateState(timestamp, !pin_state);
-    // todo callback on release
+    on_release(event);
   }
 
   void draw() override{
@@ -196,29 +194,110 @@ public:
   }
 };
 
-class CounterWidget {
-  int state;
-  int addition;
+class ListWidget: public Widget {
 public:
   void reset() override {
-    // Do nothing?
   }
   void update() override {
-    
   }
   void draw() override {
-    
+  }  
+};
+
+class CounterWidget: public Widget {
+public:
+  enum State {
+    ShowAddition,
+    ShowHistory
+  };
+private:
+  State state;
+  int counter;
+  int addition;
+  int off_x;
+  int off_y;
+public:
+
+  CounterWidget(): state(State::ShowHistory), counter(0), addition(0), off_x(0), off_y(0) {}
+
+  void initialize(int offset_x, int offset_y) {
+    off_x = offset_x;
+    off_y = offset_y;
   }
-}
+
+  void changeAddition(int delta) {
+    addition += delta;
+    state = State::ShowAddition;
+  }
+
+  void commitAddition() {
+    counter += addition;
+    addition = 0;
+    state = State::ShowHistory;
+  }
+
+  void rejectAddition() {
+    addition = 0;
+    state = State::ShowHistory;
+  }
+
+  void reset() override {
+  }
+
+  void update() override {
+  }
+
+  void draw() override {
+    constexpr int font_size = 5;
+    constexpr int max_counter_digits = 3;
+    constexpr int max_counter_len = font_size * max_counter_digits * 6;
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(off_x, off_y);
+    display.setTextSize(5);
+    display.print(counter);
+    if (state == State::ShowAddition) {
+      display.setTextSize(1);
+      if (addition >= 0)
+        display.print("+");
+      display.print(addition);
+      display.setCursor(off_x + max_counter_len, off_y + 8);
+      display.print("=");
+      display.print(counter + addition);
+    }
+  }
+};
 
 ThreeStateButtonWidget plus_minus_1;
 ThreeStateButtonWidget plus_minus_5;
+ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
+CounterWidget counter;
+
+
+void adjust1Release(int event) {
+  if (event == 1)
+    counter.changeAddition(1);
+  if (event == 2)
+    counter.changeAddition(-1);
+}
+
+void adjust5Release(int event) {
+  if (event == 1)
+    counter.changeAddition(5);
+  if (event == 2)
+    counter.changeAddition(-5);
+}
+
+void commitRelease(int event) {
+  if (event == 1)
+    counter.commitAddition();
+}
 
 void setup() {
-  plus_minus_1.initialize(0, SCREEN_HEIGHT-11, "+1", "-1", SENSOR_PIN_LEFT);
-  plus_minus_5.initialize(SCREEN_WIDTH/2 - 15, SCREEN_HEIGHT-11, "+5", "-5", SENSOR_PIN_MIDDLE);
-  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT);
+  plus_minus_1.initialize(0, SCREEN_HEIGHT-11, "+1", "-1", SENSOR_PIN_LEFT, adjust1Release);
+  plus_minus_5.initialize(SCREEN_WIDTH/2 - 15, SCREEN_HEIGHT-11, "+5", "-5", SENSOR_PIN_MIDDLE, adjust5Release);
+  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRelease);
+  counter.initialize(0, 0);
   Serial.begin(9600);
 
   // Show image buffer on the display hardware.
@@ -237,11 +316,13 @@ void loop() {
   plus_minus_1.update();
   plus_minus_5.update();
   menu.update();
+  counter.update();
 
   // draw interface  
   display.clearDisplay();
   plus_minus_1.draw();
   plus_minus_5.draw();
   menu.draw();
+  counter.draw();
   display.display();
 }
