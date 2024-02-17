@@ -96,7 +96,7 @@ class ThreeStateButtonWidget: public Widget {
   ButtonState<2> state;
   std::function<void(int)> on_release;
 public:
-  ThreeStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({100, 1000}) {
+  ThreeStateButtonWidget() : off_x(0), off_y(0), short_press_text(nullptr), long_press_text(nullptr), control_pin_no(-1), state({50, 1000}) {
   }
 
   void initialize(int offset_x, int offset_y, const char *short_press_label, const char *long_press_label, int control_pin, const std::function<void(int)> &callback) {
@@ -257,6 +257,7 @@ public:
     display.print(counter);
     if (state == State::ShowAddition) {
       display.setTextSize(1);
+      display.setCursor(off_x + max_counter_len, off_y);
       if (addition >= 0)
         display.print("+");
       display.print(addition);
@@ -273,30 +274,47 @@ ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
 CounterWidget counter;
 
+enum class VisibleScreen {
+  Starting,
+  Addition,
+  Menu
+};
+
+VisibleScreen screen;
 
 void adjust1Release(int event) {
-  if (event == 1)
-    counter.changeAddition(1);
-  if (event == 2)
-    counter.changeAddition(-1);
+  if (event == 1 || event == 2) {
+    counter.changeAddition(event == 1 ? 1 : -1);
+    screen = VisibleScreen::Addition;
+  }
 }
 
 void adjust5Release(int event) {
-  if (event == 1)
-    counter.changeAddition(5);
-  if (event == 2)
-    counter.changeAddition(-5);
+  if (event == 1 || event == 2) {
+    counter.changeAddition(event == 1 ? 5 : -5);
+    screen = VisibleScreen::Addition;
+  }
 }
 
-void commitRelease(int event) {
+void commitRejectRelease(int event) {
+  if (event > 0)
+    screen = VisibleScreen::Starting;
   if (event == 1)
     counter.commitAddition();
+  if (event == 2)
+    counter.rejectAddition();
+}
+
+void menuRelease(int event) {
+  // goto menu
 }
 
 void setup() {
+  screen = VisibleScreen::Starting;
   plus_minus_1.initialize(0, SCREEN_HEIGHT-11, "+1", "-1", SENSOR_PIN_LEFT, adjust1Release);
   plus_minus_5.initialize(SCREEN_WIDTH/2 - 15, SCREEN_HEIGHT-11, "+5", "-5", SENSOR_PIN_MIDDLE, adjust5Release);
-  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRelease);
+  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRejectRelease);
+  commit_reject.initialize(SCREEN_WIDTH - 7*6, SCREEN_HEIGHT-11, "ok", "drop", SENSOR_PIN_RIGHT, commitRejectRelease);
   counter.initialize(0, 0);
   Serial.begin(9600);
 
@@ -313,16 +331,32 @@ void setup() {
 
 void loop() {
   // update state
-  plus_minus_1.update();
-  plus_minus_5.update();
-  menu.update();
-  counter.update();
-
+  if (screen == VisibleScreen::Starting) {
+    plus_minus_1.update();
+    plus_minus_5.update();
+    menu.update();
+    counter.update();
+  }
+  if (screen == VisibleScreen::Addition) {
+    plus_minus_1.update();
+    plus_minus_5.update();
+    commit_reject.update();
+    counter.update();
+  }
   // draw interface  
   display.clearDisplay();
-  plus_minus_1.draw();
-  plus_minus_5.draw();
-  menu.draw();
-  counter.draw();
+
+  if (screen == VisibleScreen::Starting) {
+    plus_minus_1.draw();
+    plus_minus_5.draw();
+    menu.draw();
+    counter.draw();
+  }
+  if (screen == VisibleScreen::Addition) {
+    plus_minus_1.draw();
+    plus_minus_5.draw();
+    commit_reject.draw();
+    counter.draw();
+  }
   display.display();
 }
