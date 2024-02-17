@@ -16,6 +16,8 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 #define SENSOR_PIN_MIDDLE 27
 #define SENSOR_PIN_RIGHT 14
 
+#define MAX_HIST_STR_LEN 21
+
 /**
  * @brief abstract class controlling button state
  * 
@@ -194,50 +196,105 @@ public:
   }
 };
 
+template<int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
 class ListWidget: public Widget {
+  int off_x;
+  int off_y;
+  int w;
+  int h;
+  char items[MAX_ITEMS][MAX_LEN+1];
+  int size;
+  int first_visible_item;
 public:
+  ListWidget() : off_x(0), off_y(0), w(0), h(0), size(0), first_visible_item(0) {}
+
+  void initialize(int offset_x, int offset_y, int width, int height) {
+    off_x = offset_x;
+    off_y = offset_y;
+    w = width;
+    h = height;
+    size = 0;
+    first_visible_item = 0;
+  }
+
+  void addItem(const char *item) {
+    if (size == MAX_ITEMS)
+      size = 0;
+    strncpy(items[size], item, MAX_LEN);
+    items[size][MAX_LEN] = '\0';
+    size++;
+  }
+
+  void moveDown() {
+    if (first_visible_item < size-1)
+      first_visible_item++;
+  }
+
+  void moveUp() {
+    if (first_visible_item > 0)
+      first_visible_item--;
+  }
+
   void reset() override {
   }
+
   void update() override {
   }
+
   void draw() override {
-  }  
+    display.setTextColor(SH110X_WHITE);
+    int num_items_to_print = std::min(h / 8, size - first_visible_item);
+    int max_item_width = std::min(w / 6, MAX_LEN);
+    char print_buffer[MAX_LEN+2+1];
+    display.setTextSize(1);
+    for (int i = 0; i < num_items_to_print; ++i) {
+      display.setCursor(off_x, off_y + i*8);
+      int item_no = i + first_visible_item;
+      strncpy(print_buffer, items[item_no], MAX_LEN);
+      print_buffer[max_item_width] = '\0';
+      display.print(print_buffer);
+    }
+  }
 };
 
 class CounterWidget: public Widget {
 public:
   enum State {
-    ShowAddition,
-    ShowHistory
+    ShowHistory,
+    ShowDelta
   };
 private:
   State state;
   int counter;
-  int addition;
+  int delta;
   int off_x;
   int off_y;
 public:
 
-  CounterWidget(): state(State::ShowHistory), counter(0), addition(0), off_x(0), off_y(0) {}
+  CounterWidget(): state(State::ShowHistory), counter(0), delta(0), off_x(0), off_y(0) {}
 
   void initialize(int offset_x, int offset_y) {
     off_x = offset_x;
     off_y = offset_y;
   }
 
-  void changeAddition(int delta) {
-    addition += delta;
-    state = State::ShowAddition;
+  int getDelta() {
+    return delta;
   }
 
-  void commitAddition() {
-    counter += addition;
-    addition = 0;
+  void changeDelta(int change) {
+    delta += change;
+    state = State::ShowDelta;
+  }
+
+  void commitDelta() {
+    counter += delta;
+    delta = 0;
     state = State::ShowHistory;
   }
 
-  void rejectAddition() {
-    addition = 0;
+  void rejectDelta() {
+    delta = 0;
     state = State::ShowHistory;
   }
 
@@ -255,15 +312,15 @@ public:
     display.setCursor(off_x, off_y);
     display.setTextSize(5);
     display.print(counter);
-    if (state == State::ShowAddition) {
+    if (state == State::ShowDelta) {
       display.setTextSize(1);
       display.setCursor(off_x + max_counter_len, off_y);
-      if (addition >= 0)
+      if (delta >= 0)
         display.print("+");
-      display.print(addition);
+      display.print(delta);
       display.setCursor(off_x + max_counter_len, off_y + 8);
       display.print("=");
-      display.print(counter + addition);
+      display.print(counter + delta);
     }
   }
 };
@@ -273,6 +330,7 @@ ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
 CounterWidget counter;
+ListWidget<10> short_history;
 
 enum class VisibleScreen {
   Starting,
@@ -284,25 +342,32 @@ VisibleScreen screen;
 
 void adjust1Release(int event) {
   if (event == 1 || event == 2) {
-    counter.changeAddition(event == 1 ? 1 : -1);
+    counter.changeDelta(event == 1 ? 1 : -1);
     screen = VisibleScreen::Addition;
   }
 }
 
 void adjust5Release(int event) {
   if (event == 1 || event == 2) {
-    counter.changeAddition(event == 1 ? 5 : -5);
+    counter.changeDelta(event == 1 ? 5 : -5);
     screen = VisibleScreen::Addition;
   }
 }
 
 void commitRejectRelease(int event) {
+  static int items_counter = 1;
   if (event > 0)
     screen = VisibleScreen::Starting;
-  if (event == 1)
-    counter.commitAddition();
+  if (event == 1) {
+    int delta = counter.getDelta();
+    char history_item[MAX_HIST_STR_LEN+1];
+    char sign = delta >= 0 ? '+' : '-';
+    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %c%d", items_counter, sign, std::abs(delta));
+    short_history.addItem(history_item);
+    counter.commitDelta();
+  }
   if (event == 2)
-    counter.rejectAddition();
+    counter.rejectDelta();
 }
 
 void menuRelease(int event) {
@@ -316,6 +381,7 @@ void setup() {
   menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRejectRelease);
   commit_reject.initialize(SCREEN_WIDTH - 7*6, SCREEN_HEIGHT-11, "ok", "drop", SENSOR_PIN_RIGHT, commitRejectRelease);
   counter.initialize(0, 0);
+  short_history.initialize(72, 0, 128-72, 64-11);
   Serial.begin(9600);
 
   // Show image buffer on the display hardware.
@@ -336,6 +402,7 @@ void loop() {
     plus_minus_5.update();
     menu.update();
     counter.update();
+    short_history.update();
   }
   if (screen == VisibleScreen::Addition) {
     plus_minus_1.update();
@@ -351,6 +418,7 @@ void loop() {
     plus_minus_5.draw();
     menu.draw();
     counter.draw();
+    short_history.draw();
   }
   if (screen == VisibleScreen::Addition) {
     plus_minus_1.draw();
