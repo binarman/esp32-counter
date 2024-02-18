@@ -17,6 +17,8 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 #define SENSOR_PIN_RIGHT 14
 
 #define MAX_HIST_STR_LEN 21
+#define CHAR_W 6
+#define CHAR_H 8
 
 /**
  * @brief abstract class controlling button state
@@ -205,8 +207,9 @@ class ListWidget: public Widget {
   char items[MAX_ITEMS][MAX_LEN+1];
   int size;
   int first_visible_item;
+  int insert_point; // items organized in rolling list, if storage overflows, overwrite old items
 public:
-  ListWidget() : off_x(0), off_y(0), w(0), h(0), size(0), first_visible_item(0) {}
+  ListWidget() : off_x(0), off_y(0), w(0), h(0), size(0), first_visible_item(0), insert_point(0) {}
 
   void initialize(int offset_x, int offset_y, int width, int height) {
     off_x = offset_x;
@@ -215,18 +218,20 @@ public:
     h = height;
     size = 0;
     first_visible_item = 0;
+    insert_point = 0;
   }
 
   void addItem(const char *item) {
-    if (size == MAX_ITEMS)
-      size = 0;
-    strncpy(items[size], item, MAX_LEN);
-    items[size][MAX_LEN] = '\0';
-    size++;
+    strncpy(items[insert_point], item, MAX_LEN);
+    items[insert_point][MAX_LEN] = '\0';
+    if (size < MAX_ITEMS)
+      size++;
+    insert_point = (insert_point + 1) % MAX_ITEMS;
   }
 
   void moveDown() {
-    if (first_visible_item < size-1)
+    int visible_items = h / CHAR_H;
+    if (first_visible_item < size - visible_items)
       first_visible_item++;
   }
 
@@ -244,13 +249,15 @@ public:
   void draw() override {
     display.setTextColor(SH110X_WHITE);
     int num_items_to_print = std::min(h / 8, size - first_visible_item);
+    int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
     int max_item_width = std::min(w / 6, MAX_LEN);
     char print_buffer[MAX_LEN+2+1];
     display.setTextSize(1);
     for (int i = 0; i < num_items_to_print; ++i) {
       display.setCursor(off_x, off_y + i*8);
-      int item_no = i + first_visible_item;
-      strncpy(print_buffer, items[item_no], MAX_LEN);
+      int item_pos = (first_item_pos + first_visible_item + i) % MAX_ITEMS;
+      
+      strncpy(print_buffer, items[item_pos], MAX_LEN);
       print_buffer[max_item_width] = '\0';
       display.print(print_buffer);
     }
@@ -330,7 +337,7 @@ ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
 CounterWidget counter;
-ListWidget<10> short_history;
+ListWidget<8> short_history;
 
 enum class VisibleScreen {
   Starting,
@@ -362,8 +369,10 @@ void commitRejectRelease(int event) {
     int delta = counter.getDelta();
     char history_item[MAX_HIST_STR_LEN+1];
     char sign = delta >= 0 ? '+' : '-';
-    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %c%d", items_counter, sign, std::abs(delta));
+    snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", items_counter, sign, std::abs(delta));
+    items_counter++;
     short_history.addItem(history_item);
+    short_history.moveDown();
     counter.commitDelta();
   }
   if (event == 2)
