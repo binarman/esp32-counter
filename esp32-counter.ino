@@ -128,28 +128,27 @@ public:
   void draw() override{
     // draw labels
     int s = state.getState();
-    constexpr int second_part_offset = 0;
     display.setTextColor(SH110X_WHITE);
-    int short_press_length = strlen(short_press_text) * 6;
-    int long_press_length = strlen(long_press_text) * 6;
-    int first_part_length = short_press_length + 6;
+    int short_press_length = strlen(short_press_text) * CHAR_W;
+    int long_press_length = strlen(long_press_text) * CHAR_W;
+    int first_part_length = short_press_length + CHAR_W;
     display.setCursor(off_x, off_y);
     display.setTextSize(1);
     display.print(short_press_text);
     display.print("/");
-    display.setCursor(off_x + first_part_length, off_y + second_part_offset);
+    display.setCursor(off_x + first_part_length, off_y);
     display.print(long_press_text);
 
     if (s == 1)
-      display.drawFastHLine(off_x, off_y + 8, short_press_length, SH110X_WHITE);
+      display.drawFastHLine(off_x, off_y + CHAR_H, short_press_length, SH110X_WHITE);
     if (s == 2)
-      display.drawFastHLine(off_x + first_part_length, off_y + second_part_offset + 8, long_press_length, SH110X_WHITE);
+      display.drawFastHLine(off_x + first_part_length, off_y + CHAR_H, long_press_length, SH110X_WHITE);
     // draw progress bar
     float progress = state.getProgress();
     if (progress > 0.0f) {
       int full_length = first_part_length + long_press_length;
       int progress_bar_len = full_length * progress;
-      display.drawFastHLine(off_x, off_y + second_part_offset + 10, progress_bar_len, SH110X_WHITE);
+      display.drawFastHLine(off_x, off_y + CHAR_H + 2, progress_bar_len, SH110X_WHITE);
     }
   }
 };
@@ -189,7 +188,7 @@ public:
   void draw() override{
     int s = state.getState();
     display.setTextColor(SH110X_WHITE);
-    int press_text_length = strlen(press_text) * 6;
+    int press_text_length = strlen(press_text) * CHAR_W;
     display.setCursor(off_x, off_y);
     display.setTextSize(1);
     display.print(press_text);
@@ -250,7 +249,7 @@ public:
     display.setTextColor(SH110X_WHITE);
     int num_items_to_print = std::min(h / 8, size - first_visible_item);
     int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
-    int max_item_width = std::min(w / 6, MAX_LEN);
+    int max_item_width = std::min(w / CHAR_W, MAX_LEN);
     char print_buffer[MAX_LEN+2+1];
     display.setTextSize(1);
     for (int i = 0; i < num_items_to_print; ++i) {
@@ -314,7 +313,7 @@ public:
   void draw() override {
     constexpr int font_size = 5;
     constexpr int max_counter_digits = 3;
-    constexpr int max_counter_len = font_size * max_counter_digits * 6;
+    constexpr int max_counter_len = font_size * max_counter_digits * CHAR_W;
     display.setTextColor(SH110X_WHITE);
     display.setCursor(off_x, off_y);
     display.setTextSize(5);
@@ -325,7 +324,7 @@ public:
       if (delta >= 0)
         display.print("+");
       display.print(delta);
-      display.setCursor(off_x + max_counter_len, off_y + 8);
+      display.setCursor(off_x + max_counter_len, off_y + CHAR_H);
       display.print("=");
       display.print(counter + delta);
     }
@@ -387,8 +386,8 @@ void setup() {
   screen = VisibleScreen::Starting;
   plus_minus_1.initialize(0, SCREEN_HEIGHT-11, "+1", "-1", SENSOR_PIN_LEFT, adjust1Release);
   plus_minus_5.initialize(SCREEN_WIDTH/2 - 15, SCREEN_HEIGHT-11, "+5", "-5", SENSOR_PIN_MIDDLE, adjust5Release);
-  menu.initialize(SCREEN_WIDTH - 4*6, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRejectRelease);
-  commit_reject.initialize(SCREEN_WIDTH - 7*6, SCREEN_HEIGHT-11, "ok", "drop", SENSOR_PIN_RIGHT, commitRejectRelease);
+  menu.initialize(SCREEN_WIDTH - 4*CHAR_W, SCREEN_HEIGHT-11, "menu", SENSOR_PIN_RIGHT, commitRejectRelease);
+  commit_reject.initialize(SCREEN_WIDTH - 7*CHAR_W, SCREEN_HEIGHT-11, "ok", "drop", SENSOR_PIN_RIGHT, commitRejectRelease);
   counter.initialize(0, 0);
   short_history.initialize(72, 0, 128-72, 64-11);
   Serial.begin(9600);
@@ -402,6 +401,7 @@ void setup() {
  
   display.display();
   delay(2000);
+  setCpuFrequencyMhz(80);
 }
 
 void loop() {
