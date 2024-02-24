@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <functional>
 #include <string.h>
+#include <cassert>
 
 #define MAX_HIST_STR_LEN 21
 #define CHAR_W 6
@@ -128,7 +129,7 @@ public:
 
   void update() override{
     bool pin_state = digitalRead(control_pin_no);
-    int timestamp = esp_timer_get_time() / 1000;
+    auto timestamp = millis();
     int event = state.updateState(timestamp, !pin_state);
     on_release(event);
   }
@@ -190,7 +191,7 @@ public:
 
   void update() override{
     bool pin_state = digitalRead(control_pin_no);
-    int timestamp = esp_timer_get_time() / 1000;
+    int timestamp = millis();
     int event = state.updateState(timestamp, !pin_state);
     on_release(event);
   }

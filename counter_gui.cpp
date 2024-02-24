@@ -1,5 +1,6 @@
 #include "counter_gui.h"
 #include "widgets.h"
+#include <cstdio>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -62,7 +63,7 @@ void menuRelease(int event) {
 
 namespace counter_gui {
 
-void setup(Adafruit_SH1106G *display) {
+void setup(Display *display) {
   screen = VisibleScreen::Starting;
   // initialize lower panel
   plus_minus_1.setParams("+1", "-1", SENSOR_PIN_LEFT, adjust1Release);
