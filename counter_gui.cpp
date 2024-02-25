@@ -4,9 +4,10 @@
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define SENSOR_PIN_LEFT 12
-#define SENSOR_PIN_MIDDLE 27
-#define SENSOR_PIN_RIGHT 14
+
+#define LEFT_BUTTON_ID 0
+#define MIDDLE_BUTTON_ID 1
+#define RIGHT_BUTTON_ID 2
 
 namespace {
 ThreeStateButtonWidget plus_minus_1;
@@ -63,22 +64,22 @@ void menuRelease(int event) {
 
 namespace counter_gui {
 
-void setup(Display *display) {
+void setup(HAL *hal) {
   screen = VisibleScreen::Starting;
   // initialize lower panel
-  plus_minus_1.setParams("+1", "-1", SENSOR_PIN_LEFT, adjust1Release);
-  plus_minus_5.setParams("+5", "-5", SENSOR_PIN_MIDDLE, adjust5Release);
-  menu.setParams("menu", SENSOR_PIN_RIGHT, commitRejectRelease);
-  commit_reject.setParams("ok", "drop", SENSOR_PIN_RIGHT, commitRejectRelease);
+  plus_minus_1.setParams("+1", "-1", LEFT_BUTTON_ID, adjust1Release);
+  plus_minus_5.setParams("+5", "-5", MIDDLE_BUTTON_ID, adjust5Release);
+  menu.setParams("menu", RIGHT_BUTTON_ID, commitRejectRelease);
+  commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
 
   int lower_panel_y = std::max(std::max(std::max(plus_minus_1.getH(), plus_minus_5.getH()), menu.getH()), commit_reject.getH());
-  plus_minus_1.setPos(display, 0, lower_panel_y);
-  plus_minus_5.setPos(display, SCREEN_WIDTH/2 - plus_minus_5.getW(), lower_panel_y);
-  menu.setPos(display, SCREEN_WIDTH - menu.getW(), lower_panel_y);
-  commit_reject.setPos(display, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
+  plus_minus_1.setPos(hal, 0, lower_panel_y);
+  plus_minus_5.setPos(hal, SCREEN_WIDTH/2 - plus_minus_5.getW(), lower_panel_y);
+  menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
+  commit_reject.setPos(hal, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
   //initialize main screen
-  counter.setPos(display, 0, 0);
-  short_history.setPos(display, 72, 0);
+  counter.setPos(hal, 0, 0);
+  short_history.setPos(hal, 72, 0);
   counter.setParams(72, lower_panel_y); // todo fix dimensions of counter
   short_history.setParams(SCREEN_WIDTH-counter.getW(), SCREEN_HEIGHT - lower_panel_y);
 }

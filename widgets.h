@@ -78,12 +78,14 @@ public:
 
 class Widget {
 protected:
-  Display *display = nullptr;
+  HAL *hal = nullptr;
+  Display *display;
   int off_x = 0;
   int off_y = 0;
 public:
-  void setPos(Display *disp, int offset_x, int offset_y) {
-    display = disp;
+  void setPos(HAL *h, int offset_x, int offset_y) {
+    hal = h;
+    display = h->display();
     off_x = offset_x;
     off_y = offset_y;
   }
@@ -100,15 +102,14 @@ public:
 class ThreeStateButtonWidget: public Widget {
   const char *short_press_text = nullptr;
   const char *long_press_text = nullptr;
-  int control_pin_no = -1;
+  int button_id = -1;
   ButtonState<2> state = {50, 1000};
   std::function<void(int)> on_release = nullptr;
 public:
-  void setParams(const char *short_press_label, const char *long_press_label, int control_pin, const std::function<void(int)> &callback) {
+  void setParams(const char *short_press_label, const char *long_press_label, int btn_id, const std::function<void(int)> &callback) {
     short_press_text = short_press_label;
     long_press_text = long_press_label;
-    control_pin_no = control_pin;
-    pinMode(control_pin_no, INPUT_PULLUP);
+    button_id = btn_id;
     state.reset();
     on_release = callback;
   }
@@ -128,8 +129,8 @@ public:
   }
 
   void update() override{
-    bool pin_state = digitalRead(control_pin_no);
-    auto timestamp = millis();
+    bool pin_state = hal->buttonPressed(button_id);
+    auto timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, !pin_state);
     on_release(event);
   }
@@ -164,14 +165,13 @@ public:
 
 class TwoStateButtonWidget: public Widget {
   const char *press_text = nullptr;
-  int control_pin_no = -1;
+  int button_id = -1;
   ButtonState<1> state = {100};
   std::function<void(int)> on_release = nullptr;
 public:
-  void setParams(const char *press_label, int control_pin, const std::function<void(int)> callback) {
+  void setParams(const char *press_label, int btn_id, const std::function<void(int)> callback) {
     press_text = press_label;
-    control_pin_no = control_pin;
-    pinMode(control_pin_no, INPUT_PULLUP);
+    button_id = btn_id;
     state.reset();
     on_release = callback;
   }
@@ -190,8 +190,8 @@ public:
   }
 
   void update() override{
-    bool pin_state = digitalRead(control_pin_no);
-    int timestamp = millis();
+    bool pin_state = hal->buttonPressed(button_id);
+    int timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, !pin_state);
     on_release(event);
   }

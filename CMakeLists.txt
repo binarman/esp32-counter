@@ -1,10 +1,20 @@
-project(esp32-counter)
-
 cmake_minimum_required(VERSION 3.10)
 
-set(SRC tests.cpp counter_gui.cpp test_hal.cpp)
+project(esp32-counter)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(SRC tests.cpp counter_gui.cpp hal.cpp)
 set(HDR counter_gui.h widgets.h hal.h)
+
+find_package(GTest REQUIRED)
+
+enable_testing()
 
 add_executable(counter_tests ${SRC})
 target_compile_definitions(counter_tests PUBLIC TEST_MODE)
+target_link_libraries(counter_tests gtest gmock gmock_main)
 
+include(GoogleTest)
+gtest_discover_tests(counter_tests)

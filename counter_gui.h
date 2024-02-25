@@ -5,7 +5,7 @@
 
 namespace counter_gui {
 
-void setup(Display *display);
+void setup(HAL *hal);
 
 void loop();
 
