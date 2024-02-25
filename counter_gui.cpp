@@ -72,7 +72,7 @@ void setup(HAL *hal) {
   menu.setParams("menu", RIGHT_BUTTON_ID, commitRejectRelease);
   commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
 
-  int lower_panel_y = std::max(std::max(std::max(plus_minus_1.getH(), plus_minus_5.getH()), menu.getH()), commit_reject.getH());
+  int lower_panel_y = SCREEN_HEIGHT - std::max(std::max(std::max(plus_minus_1.getH(), plus_minus_5.getH()), menu.getH()), commit_reject.getH());
   plus_minus_1.setPos(hal, 0, lower_panel_y);
   plus_minus_5.setPos(hal, SCREEN_WIDTH/2 - plus_minus_5.getW(), lower_panel_y);
   menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
@@ -81,7 +81,7 @@ void setup(HAL *hal) {
   counter.setPos(hal, 0, 0);
   short_history.setPos(hal, 72, 0);
   counter.setParams(72, lower_panel_y); // todo fix dimensions of counter
-  short_history.setParams(SCREEN_WIDTH-counter.getW(), SCREEN_HEIGHT - lower_panel_y);
+  short_history.setParams(SCREEN_WIDTH-counter.getW(), lower_panel_y);
 }
 
 void loop() {

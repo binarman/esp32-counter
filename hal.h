@@ -22,7 +22,6 @@ class Display {
   MOCK_METHOD(void, setCursor, (int16_t x, int16_t y));
   MOCK_METHOD(size_t, print, (const char s[]));
   MOCK_METHOD(size_t, print, (char c));
-  MOCK_METHOD(size_t, print, (unsigned char val));
   MOCK_METHOD(size_t, print, (int val));
 };
 

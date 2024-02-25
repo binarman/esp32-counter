@@ -129,16 +129,16 @@ public:
   }
 
   void update() override{
-    bool pin_state = hal->buttonPressed(button_id);
+    bool button_state = hal->buttonPressed(button_id);
     auto timestamp = hal->uptimeMillis();
-    int event = state.updateState(timestamp, !pin_state);
+    int event = state.updateState(timestamp, button_state);
     on_release(event);
   }
 
   void draw() override {
     // draw labels
     int s = state.getState();
-     display->setTextColor(SH110X_WHITE);
+    display->setTextColor(SH110X_WHITE);
     int short_press_length = strlen(short_press_text) * CHAR_W;
     int long_press_length = strlen(long_press_text) * CHAR_W;
     int first_part_length = short_press_length + CHAR_W;
@@ -190,9 +190,9 @@ public:
   }
 
   void update() override{
-    bool pin_state = hal->buttonPressed(button_id);
+    bool button_state = hal->buttonPressed(button_id);
     int timestamp = hal->uptimeMillis();
-    int event = state.updateState(timestamp, !pin_state);
+    int event = state.updateState(timestamp, button_state);
     on_release(event);
   }
 
