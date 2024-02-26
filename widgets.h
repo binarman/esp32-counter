@@ -11,6 +11,7 @@
 #define MAX_HIST_STR_LEN 21
 #define CHAR_W 6
 #define CHAR_H 8
+#define MAX_LABEL_LEN 21
 
 /**
  * @brief abstract class controlling button state
@@ -142,12 +143,15 @@ public:
     int short_press_length = strlen(short_press_text) * CHAR_W;
     int long_press_length = strlen(long_press_text) * CHAR_W;
     int first_part_length = short_press_length + CHAR_W;
+
+    char full_label[MAX_LABEL_LEN+1] = {0};
+    strncat(full_label, short_press_text, MAX_LABEL_LEN);
+    strncat(full_label, "/", MAX_LABEL_LEN);
+    strncat(full_label, long_press_text, MAX_LABEL_LEN);
+    full_label[MAX_LABEL_LEN] = '\0';
     display->setCursor(off_x, off_y);
     display->setTextSize(1);
-    display->print(short_press_text);
-    display->print("/");
-    display->setCursor(off_x + first_part_length, off_y);
-    display->print(long_press_text);
+    display->print(full_label);
 
     if (s == 1)
       display->drawFastHLine(off_x, off_y + CHAR_H, short_press_length, SH110X_WHITE);

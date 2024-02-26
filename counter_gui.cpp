@@ -86,32 +86,40 @@ void setup(HAL *hal) {
 
 void loop() {
   // update state
-  if (screen == VisibleScreen::Starting) {
-    plus_minus_1.update();
-    plus_minus_5.update();
-    menu.update();
-    counter.update();
-    short_history.update();
+  switch(screen) {
+    case VisibleScreen::Starting:
+      plus_minus_1.update();
+      plus_minus_5.update();
+      menu.update();
+      counter.update();
+      short_history.update();
+      break;
+    case VisibleScreen::Addition:
+      plus_minus_1.update();
+      plus_minus_5.update();
+      commit_reject.update();
+      counter.update();
+      break;
+    default:
+      assert(false);
   }
-  if (screen == VisibleScreen::Addition) {
-    plus_minus_1.update();
-    plus_minus_5.update();
-    commit_reject.update();
-    counter.update();
-  }
-  // draw interface
-  if (screen == VisibleScreen::Starting) {
-    plus_minus_1.draw();
-    plus_minus_5.draw();
-    menu.draw();
-    counter.draw();
-    short_history.draw();
-  }
-  if (screen == VisibleScreen::Addition) {
-    plus_minus_1.draw();
-    plus_minus_5.draw();
-    commit_reject.draw();
-    counter.draw();
+  // draw screen
+  switch(screen) {
+    case VisibleScreen::Starting:
+      plus_minus_1.draw();
+      plus_minus_5.draw();
+      menu.draw();
+      counter.draw();
+      short_history.draw();
+      break;
+    case VisibleScreen::Addition:
+      plus_minus_1.draw();
+      plus_minus_5.draw();
+      commit_reject.draw();
+      counter.draw();
+      break;
+    default:
+      assert(false);
   }
 }
 
