@@ -12,6 +12,7 @@
 #define CHAR_W 6
 #define CHAR_H 8
 #define MAX_LABEL_LEN 21
+#define MAX_WIDGETS 10
 
 /**
  * @brief abstract class controlling button state
@@ -91,6 +92,7 @@ public:
     off_y = offset_y;
   }
   
+  virtual ~Widget() = default;
   int getX() { return off_x; }
   int getY() { return off_y; }
   virtual int getW() = 0;
@@ -350,6 +352,41 @@ public:
       display->print("=");
       display->print(counter + delta);
     }
+  }
+};
+
+class Screen {
+  Widget *w[MAX_WIDGETS];
+  int size = 0;
+public:
+  void setup() {
+    size = 0;
+  }
+
+  void addWidget(Widget *widget){
+    w[size++] = widget;
+  }
+
+  void update() {
+    for (int i = 0; i < size; ++i)
+      w[i]->update();
+  }
+
+  void draw() {
+    for (int i = 0; i < size; ++i)
+      w[i]->draw();
+  }
+};
+
+class AcceptScreen: public Screen {
+  const char *m = nullptr;
+public:
+  AcceptScreen(int screen_width, int screen_height){
+    // TODO add message label, buttton 1, button 2
+  }
+  void initialize(const char *message) {
+    m = message;
+    // TODO update label widget
   }
 };
 
