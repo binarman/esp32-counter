@@ -172,7 +172,7 @@ public:
 class TwoStateButtonWidget: public Widget {
   const char *press_text = nullptr;
   int button_id = -1;
-  ButtonState<1> state = {100};
+  ButtonState<1> state = {50};
   std::function<void(int)> on_release = nullptr;
 public:
   void setParams(const char *press_label, int btn_id, const std::function<void(int)> callback) {
@@ -296,6 +296,9 @@ private:
   int h = -1;
 public:
   void setParams(int width, int height) {
+    state = State::ShowHistory;
+    delta = 0;
+    counter = 0;
     w = width;
     h = height;
   }

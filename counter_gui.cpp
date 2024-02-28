@@ -15,6 +15,11 @@ ThreeStateButtonWidget plus_minus_1;
 ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
+
+TwoStateButtonWidget up;
+TwoStateButtonWidget down;
+ThreeStateButtonWidget select_return;
+
 CounterWidget counter;
 ListWidget<8> short_history;
 
@@ -75,8 +80,27 @@ void commitRejectRelease(int event) {
 }
 
 void menuRelease(int event) {
-  // goto menu
+  if (event > 0)
+    gotoScreen(&menu_screen);
 }
+
+void menuUpRelease(int event) {
+  // TBD
+}
+
+void menuDownRelease(int event) {
+  // TBD
+}
+
+void selectReturnRelease(int event) {
+  if (event == 1) {
+    // TBD
+  }
+  if (event == 2) {
+    popScreen();
+  }
+}
+
 }
 
 namespace counter_gui {
@@ -90,11 +114,20 @@ void setup(HAL *hal) {
   menu.setParams("menu", RIGHT_BUTTON_ID, menuRelease);
   commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
 
-  int lower_panel_y = SCREEN_HEIGHT - std::max(std::max(std::max(plus_minus_1.getH(), plus_minus_5.getH()), menu.getH()), commit_reject.getH());
+  up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
+  down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
+  select_return.setParams("sel", "back", RIGHT_BUTTON_ID, selectReturnRelease);
+
+  int lower_panel_y = SCREEN_HEIGHT - plus_minus_1.getH();
   plus_minus_1.setPos(hal, 0, lower_panel_y);
-  plus_minus_5.setPos(hal, SCREEN_WIDTH/2 - plus_minus_5.getW(), lower_panel_y);
+  plus_minus_5.setPos(hal, (SCREEN_WIDTH - plus_minus_5.getW())/2, lower_panel_y);
   menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
   commit_reject.setPos(hal, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
+
+  up.setPos(hal, 0, lower_panel_y);
+  down.setPos(hal, (SCREEN_WIDTH - down.getW())/2, lower_panel_y);
+  select_return.setPos(hal, SCREEN_WIDTH - select_return.getW(), lower_panel_y);
+
   //initialize main screen
   counter.setPos(hal, 0, 0);
   short_history.setPos(hal, 72, 0);
@@ -116,6 +149,10 @@ void setup(HAL *hal) {
   delta_screen.addWidget(&plus_minus_5);
   delta_screen.addWidget(&commit_reject);
   delta_screen.addWidget(&counter);
+
+  menu_screen.addWidget(&up);
+  menu_screen.addWidget(&down);
+  menu_screen.addWidget(&select_return);
 }
 
 void loop() {
