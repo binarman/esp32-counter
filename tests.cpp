@@ -12,6 +12,7 @@ using ::testing::StrEq;
 using ::testing::_;
 
 #define CHAR_W 6
+#define CHAR_H 8
 
 void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2, bool btn3) {
   EXPECT_CALL(h, uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
@@ -69,11 +70,18 @@ void expectDeltaScreen(Display &d, int counter, int delta) {
 }
 
 void expectMenuScreen(Display &d) {
-  EXPECT_CALL(d, setTextColor(1)).Times(3);
-  EXPECT_CALL(d, setTextSize(1)).Times(3);
+  EXPECT_CALL(d, setTextColor(1)).Times(4);
+  EXPECT_CALL(d, setTextSize(1)).Times(4);
+  EXPECT_CALL(d, setCursor(0, 0));
+  EXPECT_CALL(d, setCursor(0, CHAR_H));
+  EXPECT_CALL(d, setCursor(0, CHAR_H*2));
   EXPECT_CALL(d, setCursor(0, 53));
   EXPECT_CALL(d, setCursor(61, 53));
   EXPECT_CALL(d, setCursor(80, 53));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1ashow full history"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" start new counting"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" drop full history"))));
+
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1e"))));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1f"))));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("sel/back"))));

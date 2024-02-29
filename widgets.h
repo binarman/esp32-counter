@@ -214,34 +214,26 @@ public:
   }
 };
 
-template<int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
-class ListWidget: public Widget {
+template<class Derived, int MAX_ITEM_LEN>
+class ListWidgetBase: public Widget {
+protected:
   int w = -1;
   int h = -1;
-  char items[MAX_ITEMS][MAX_LEN+1];
-  int size = 0;
   int first_visible_item = 0;
-  int insert_point = 0; // items organized in rolling list, if storage overflows, overwrite old items
+
+  Derived &d() {
+    return *static_cast<Derived *>(this);
+  }
 public:
   void setParams(int width, int height) {
     w = width;
     h = height;
-    size = 0;
     first_visible_item = 0;
-    insert_point = 0;
-  }
-
-  void addItem(const char *item) {
-    strncpy(items[insert_point], item, MAX_LEN);
-    items[insert_point][MAX_LEN] = '\0';
-    if (size < MAX_ITEMS)
-      size++;
-    insert_point = (insert_point + 1) % MAX_ITEMS;
   }
 
   void moveDown() {
     int visible_items = h / CHAR_H;
-    if (first_visible_item < size - visible_items)
+    if (first_visible_item < d().getSize() - visible_items)
       first_visible_item++;
   }
 
@@ -258,28 +250,123 @@ public:
     return h;
   }
 
+  void draw() override {
+    display->setTextColor(SH110X_WHITE);
+    const int size = d().getSize();
+    int num_items_to_print = std::min(h / CHAR_H, size - first_visible_item);
+    int max_item_width = std::min(w / CHAR_W, MAX_ITEM_LEN);
+    char print_buffer[MAX_ITEM_LEN+1];
+    display->setTextSize(1);
+    for (int i = 0; i < num_items_to_print; ++i) {
+      display->setCursor(off_x, off_y + i * CHAR_H);
+      d().getItem(first_visible_item + i, print_buffer, MAX_ITEM_LEN);
+      print_buffer[max_item_width] = '\0';
+      display->print(print_buffer);
+    }
+  }
+};
+
+template<int MAX_ITEMS, int MAX_ITEM_LEN = MAX_HIST_STR_LEN>
+class OverwritingListWidget: public ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>, MAX_ITEM_LEN> {
+  char items[MAX_ITEMS][MAX_ITEM_LEN+1];
+  int size = 0;
+  int insert_point = 0; // items organized in rolling list, if storage overflows, overwrite old items
+  using Base = ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>, MAX_ITEM_LEN>;
+public:
+  void setParams(int width, int height) {
+    Base::setParams(width, height);
+    size = 0;
+    insert_point = 0;
+  }
+
+  void addItem(const char *item) {
+    strncpy(items[insert_point], item, MAX_ITEM_LEN);
+    items[insert_point][MAX_ITEM_LEN] = '\0';
+    if (size < MAX_ITEMS)
+      size++;
+    insert_point = (insert_point + 1) % MAX_ITEMS;
+  }
+
+  int getSize() {
+    return size;
+  }
+
+  void getItem(int i, char *buffer, int max_str_len) {
+    int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
+    int item_pos = (first_item_pos + i) % MAX_ITEMS;
+    strncpy(buffer, items[item_pos], max_str_len);
+    buffer[max_str_len] = '\0';
+  }
+
+  void reset() override {
+  }
+
+  void update() override {
+  }
+};
+
+template<int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
+class ListWithSelectorWidget: public ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>, MAX_LEN> {
+  int sel_pos = 0;
+  char items[MAX_ITEMS][MAX_LEN+1];
+  int size = 0;
+  using Base = ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>, MAX_LEN>;
+public:
+  void setParams(int width, int height, int selector_pos) {
+    Base::setParams(width, height);
+    size = 0;
+    sel_pos = selector_pos;
+  }
+
+  void addItem(const char *item) {
+    strncpy(items[size], item, MAX_LEN);
+    items[size][MAX_LEN] = '\0';
+    assert(size < MAX_ITEMS);
+    size++;
+  }
+
+  int getSize() {
+    return size;
+  }
+
+  void getItem(int i, char *buffer, int max_str_len) {
+    assert(max_str_len > 1);
+    if (i == sel_pos)
+      buffer[0] = '\x1a';
+    else
+      buffer[0] = ' ';
+    buffer[1] = '\0';
+    strncat(buffer, items[i], max_str_len);
+    buffer[max_str_len] = '\0';
+  }
+
   void reset() override {
   }
 
   void update() override {
   }
 
-  void draw() override {
-    display->setTextColor(SH110X_WHITE);
-    int num_items_to_print = std::min(h / 8, size - first_visible_item);
-    int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
-    int max_item_width = std::min(w / CHAR_W, MAX_LEN);
-    char print_buffer[MAX_LEN+2+1];
-    display->setTextSize(1);
-    for (int i = 0; i < num_items_to_print; ++i) {
-      display->setCursor(off_x, off_y + i*8);
-      int item_pos = (first_item_pos + first_visible_item + i) % MAX_ITEMS;
-      
-      strncpy(print_buffer, items[item_pos], MAX_LEN);
-      print_buffer[max_item_width] = '\0';
-      display->print(print_buffer);
-    }
+  void adjustVisibleAreaToSel() {
+    if (sel_pos < Base::first_visible_item)
+      Base::first_visible_item = sel_pos;
+    int last_visible_item = Base::first_visible_item + this->getH() / CHAR_H - 1;
+    if (sel_pos > last_visible_item)
+      Base::first_visible_item += sel_pos - last_visible_item;
   }
+
+  int getSelPos() {
+    return sel_pos;
+  }
+
+  void moveSelUp() {
+    sel_pos = std::max(sel_pos - 1, 0);
+    adjustVisibleAreaToSel();
+  }
+
+  void moveSelDown() {
+    sel_pos = std::min(sel_pos + 1, size - 1);
+    adjustVisibleAreaToSel();
+   }
 };
 
 class CounterWidget: public Widget {

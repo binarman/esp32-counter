@@ -16,12 +16,13 @@ ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
 
+CounterWidget counter;
+OverwritingListWidget<8> short_history;
+
+ListWithSelectorWidget<5> menu_items;
 TwoStateButtonWidget up;
 TwoStateButtonWidget down;
 ThreeStateButtonWidget select_return;
-
-CounterWidget counter;
-ListWidget<8> short_history;
 
 Screen main_screen;
 Screen delta_screen;
@@ -85,11 +86,13 @@ void menuRelease(int event) {
 }
 
 void menuUpRelease(int event) {
-  // TBD
+  if (event > 0)
+    menu_items.moveSelUp();
 }
 
 void menuDownRelease(int event) {
-  // TBD
+  if (event > 0)
+    menu_items.moveSelDown();
 }
 
 void selectReturnRelease(int event) {
@@ -108,31 +111,38 @@ namespace counter_gui {
 void setup(HAL *hal) {
   active_screen = 0;
   screen[0] = &main_screen;
-  // initialize lower panel
+  const int lower_panel_height = 11;
+  // initialize main screen and delta widgets
   plus_minus_1.setParams("+1", "-1", LEFT_BUTTON_ID, adjust1Release);
   plus_minus_5.setParams("+5", "-5", MIDDLE_BUTTON_ID, adjust5Release);
   menu.setParams("menu", RIGHT_BUTTON_ID, menuRelease);
   commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
 
-  up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
-  down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
-  select_return.setParams("sel", "back", RIGHT_BUTTON_ID, selectReturnRelease);
-
-  int lower_panel_y = SCREEN_HEIGHT - plus_minus_1.getH();
+  int lower_panel_y = SCREEN_HEIGHT - lower_panel_height;
   plus_minus_1.setPos(hal, 0, lower_panel_y);
   plus_minus_5.setPos(hal, (SCREEN_WIDTH - plus_minus_5.getW())/2, lower_panel_y);
   menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
   commit_reject.setPos(hal, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
 
-  up.setPos(hal, 0, lower_panel_y);
-  down.setPos(hal, (SCREEN_WIDTH - down.getW())/2, lower_panel_y);
-  select_return.setPos(hal, SCREEN_WIDTH - select_return.getW(), lower_panel_y);
-
-  //initialize main screen
+  // initialize reset of main screen widgets
   counter.setPos(hal, 0, 0);
   short_history.setPos(hal, 72, 0);
   counter.setParams(72, lower_panel_y); // todo fix dimensions of counter
   short_history.setParams(SCREEN_WIDTH-counter.getW(), lower_panel_y);
+
+  // initialize menu widgets
+  menu_items.setParams(SCREEN_WIDTH, SCREEN_HEIGHT - lower_panel_height, 0);
+  menu_items.addItem("show full history");
+  menu_items.addItem("start new counting");
+  menu_items.addItem("drop full history");
+  up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
+  down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
+  select_return.setParams("sel", "back", RIGHT_BUTTON_ID, selectReturnRelease);
+
+  menu_items.setPos(hal, 0, 0);
+  up.setPos(hal, 0, lower_panel_y);
+  down.setPos(hal, (SCREEN_WIDTH - down.getW())/2, lower_panel_y);
+  select_return.setPos(hal, SCREEN_WIDTH - select_return.getW(), lower_panel_y);
 
   // initialize screens
   main_screen.setup();
@@ -150,6 +160,7 @@ void setup(HAL *hal) {
   delta_screen.addWidget(&commit_reject);
   delta_screen.addWidget(&counter);
 
+  menu_screen.addWidget(&menu_items);
   menu_screen.addWidget(&up);
   menu_screen.addWidget(&down);
   menu_screen.addWidget(&select_return);
