@@ -17,8 +17,8 @@ using ::testing::_;
 void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2, bool btn3) {
   EXPECT_CALL(h, uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
   EXPECT_CALL(h, buttonPressed(0)).WillOnce(Return(btn1));
-  EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));;
-  EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));;
+  EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));
+  EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));
 }
 
 void expectMainScreen(Display &d, int counter) {
@@ -126,7 +126,11 @@ void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2, float 
     EXPECT_CALL(d, drawFastHLine(0, 61, 2*CHAR_W, SH110X_WHITE));
 
   if (btn2 >= 0)
-    assert(false && "todo implement");
+    EXPECT_CALL(d, drawFastHLine(49, 63, (int)(btn2*5*CHAR_W), SH110X_WHITE));
+  if (btn2 == 1.0)
+    EXPECT_CALL(d, drawFastHLine(49 + 3*CHAR_W, 61, 2*CHAR_W, SH110X_WHITE));
+  else if (btn2 >= 0.05)
+    EXPECT_CALL(d, drawFastHLine(49, 61, 2*CHAR_W, SH110X_WHITE));
 
   if (btn3 >= 0)
     EXPECT_CALL(d, drawFastHLine(86, 63, (int)(btn3*7*CHAR_W), SH110X_WHITE));
@@ -134,6 +138,31 @@ void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2, float 
     assert(false && "todo implement");
   else if (btn3 >= 0.05)
     EXPECT_CALL(d, drawFastHLine(86, 61, 2*CHAR_W, SH110X_WHITE));
+}
+
+void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3, int press_time, int &timestamp) {
+  auto &d = *h.display();
+  EXPECT_CALL(d, setTextColor(::testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, setTextSize(::testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, setCursor(::testing::_, testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, print(Matcher<const char *>(::testing::_))).WillRepeatedly(Return(0));
+  EXPECT_CALL(d, print(Matcher<int>(::testing::_))).WillRepeatedly(Return(0));
+  EXPECT_CALL(d, drawFastHLine(::testing::_, ::testing::_, ::testing::_, ::testing::_)).WillRepeatedly(Return());
+
+  // start pressing
+  expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
+  counter_gui::loop();
+  // register press of required time
+  timestamp += press_time;
+  expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
+  counter_gui::loop();
+  // release buttons
+  timestamp += 10;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  ::testing::Mock::VerifyAndClearExpectations(&d);
+  ::testing::Mock::VerifyAndClearExpectations(&h);
 }
 
 TEST(basic_tests, main_screen) {
@@ -145,7 +174,7 @@ TEST(basic_tests, main_screen) {
   counter_gui::loop();
 }
 
-TEST(basic_tests, add_counter) {
+TEST(basic_tests, add_counter_plus1) {
   Display d;
   HAL h(&d);
   constexpr int start_time = 321;
@@ -185,6 +214,49 @@ TEST(basic_tests, add_counter) {
   expectUpdateButtons(h, start_time + 60 + 110, false, false, false);
   expectMainScreen(d, 1);
   expectMainScreenHistory(d, {"1.+1"});
+  expectMainScreenButtonAnimation(d, -1, -1, -1);
+  counter_gui::loop();
+}
+
+TEST(basic_tests, add_counter_plus1_minus5) {
+  Display d;
+  HAL h(&d);
+  counter_gui::setup(&h);
+  int timestamp = 321;
+  // pressing the +1/-1 button
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // press +5/-5 button
+  expectUpdateButtons(h, timestamp + 60, false, true, false);
+  expectDeltaScreen(d, 0, 1);
+  expectDeltaScreenButtonAnimation(d, -1, -1, -1);
+  counter_gui::loop();
+
+  expectUpdateButtons(h, timestamp + 60 + 150, false, true, false);
+  expectDeltaScreen(d, 0, 1);
+  expectDeltaScreenButtonAnimation(d, -1, 0.15, -1);
+  counter_gui::loop();
+
+  expectUpdateButtons(h, timestamp + 60 + 1000, false, true, false);
+  expectDeltaScreen(d, 0, 1);
+  expectDeltaScreenButtonAnimation(d, -1, 1, -1);
+  counter_gui::loop();
+
+  // release +5/-5 button, press ok/drop button
+  expectUpdateButtons(h, timestamp + 60 + 1001, false, false, true);
+  expectDeltaScreen(d, 0, -4);
+  expectDeltaScreenButtonAnimation(d, -1, -1, -1);
+  counter_gui::loop();
+
+  expectUpdateButtons(h, timestamp + 60 + 1001 + 100, false, false, true);
+  expectDeltaScreen(d, 0, -4);
+  expectDeltaScreenButtonAnimation(d, -1, -1, 0.1);
+  counter_gui::loop();
+
+  // release ok/drop button
+  expectUpdateButtons(h, timestamp + 60 + 1001 + 101, false, false, false);
+  expectMainScreen(d, -4);
+  expectMainScreenHistory(d, {"1.-4"});
   expectMainScreenButtonAnimation(d, -1, -1, -1);
   counter_gui::loop();
 }

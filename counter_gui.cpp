@@ -28,6 +28,8 @@ Screen main_screen;
 Screen delta_screen;
 Screen menu_screen;
 
+// counter state
+int items_counter = 1;
 Screen *screen[MAX_SCREEN_DEPTH];
 int active_screen;
 
@@ -63,7 +65,6 @@ void adjust5Release(int event) {
 }
 
 void commitRejectRelease(int event) {
-  static int items_counter = 1;
   if (event > 0)
     popScreen();
   if (event == 1) {
@@ -110,6 +111,7 @@ namespace counter_gui {
 
 void setup(HAL *hal) {
   active_screen = 0;
+  items_counter = 1;
   screen[0] = &main_screen;
   const int lower_panel_height = 11;
   // initialize main screen and delta widgets
