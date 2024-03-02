@@ -394,6 +394,10 @@ public:
     return delta;
   }
 
+  int getValue() {
+    return counter;
+  }
+
   void changeDelta(int change) {
     delta += change;
     state = State::ShowDelta;

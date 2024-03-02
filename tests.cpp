@@ -87,6 +87,21 @@ void expectMenuScreen(Display &d) {
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("sel/back"))));
 }
 
+void expectHistoryScreen(Display &d, const std::vector<std::string> &entries) {
+  EXPECT_CALL(d, setTextColor(1)).Times(4);
+  EXPECT_CALL(d, setTextSize(1)).Times(4);
+  EXPECT_CALL(d, setCursor(0, 53));
+  EXPECT_CALL(d, setCursor(61, 53));
+  EXPECT_CALL(d, setCursor(104, 53));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1e"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1f"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("back"))));
+  for (int i = 0; i < entries.size(); ++i){
+    EXPECT_CALL(d, setCursor(0, i*8));
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq(entries[i]))));
+  }
+}
+
 void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2, float btn3) {
   if (btn1 >= 0)
     EXPECT_CALL(d, drawFastHLine(0, 63, (int)(btn1*5*CHAR_W), SH110X_WHITE));
@@ -307,6 +322,33 @@ TEST(basic_tests, go_to_menu) {
   expectUpdateButtons(h, start_time + 70 + 50 + 1000 + 10, false, false, false);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, -1, -1, -1);
+  counter_gui::loop();
+}
+
+TEST(basic_tests, full_history) {
+  Display d;
+  HAL h(&d);
+  int timestamp = 321;
+  // start pressing the menu button
+  counter_gui::setup(&h);
+
+  // add +1; +2; +3...
+  int num_records = 10;
+  for (int i = 0; i < num_records; ++i) {
+    for (int j = 0; j < i+1; ++j)
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  }
+
+  // goto menu
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  // goto history
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  // test contents
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6"});
+  expectUpdateButtons(h, timestamp+1, false, false, false);
   counter_gui::loop();
 }
 

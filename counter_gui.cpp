@@ -20,13 +20,19 @@ CounterWidget counter;
 OverwritingListWidget<8> short_history;
 
 ListWithSelectorWidget<5> menu_items;
-TwoStateButtonWidget up;
-TwoStateButtonWidget down;
+TwoStateButtonWidget menu_up;
+TwoStateButtonWidget menu_down;
 ThreeStateButtonWidget select_return;
+
+TwoStateButtonWidget history_up;
+TwoStateButtonWidget history_down;
+TwoStateButtonWidget history_return;
+OverwritingListWidget<128> history_items;
 
 Screen main_screen;
 Screen delta_screen;
 Screen menu_screen;
+Screen history_screen;
 
 // counter state
 int items_counter = 1;
@@ -68,13 +74,21 @@ void commitRejectRelease(int event) {
   if (event > 0)
     popScreen();
   if (event == 1) {
+    // update short history
     int delta = counter.getDelta();
     char history_item[MAX_HIST_STR_LEN+1];
     char sign = delta >= 0 ? '+' : '-';
     snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", items_counter, sign, std::abs(delta));
-    items_counter++;
     short_history.addItem(history_item);
     short_history.moveDown();
+
+    // update full history
+    int value = counter.getValue();
+    int new_value = value + delta;
+    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d", items_counter, new_value, value, sign, std::abs(delta));
+    history_items.addItem(history_item);
+
+    items_counter++;
     counter.commitDelta();
   }
   if (event == 2)
@@ -98,11 +112,36 @@ void menuDownRelease(int event) {
 
 void selectReturnRelease(int event) {
   if (event == 1) {
-    // TBD
+    switch (menu_items.getSelPos()){
+      case 0:
+        gotoScreen(&history_screen);
+        break;
+      case 1:
+        // TBD
+        break;
+      case 2:
+        // TBD
+        break;
+    }
   }
   if (event == 2) {
     popScreen();
   }
+}
+
+void returnRelease(int event) {
+  if (event > 0)
+    popScreen();
+}
+
+void historyUpRelease(int event) {
+  if (event > 0)
+    history_items.moveUp();
+}
+
+void historyDownRelease(int event) {
+  if (event > 0)
+    history_items.moveDown();
 }
 
 }
@@ -137,19 +176,32 @@ void setup(HAL *hal) {
   menu_items.addItem("show full history");
   menu_items.addItem("start new counting");
   menu_items.addItem("drop full history");
-  up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
-  down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
+  menu_up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
+  menu_down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
   select_return.setParams("sel", "back", RIGHT_BUTTON_ID, selectReturnRelease);
 
   menu_items.setPos(hal, 0, 0);
-  up.setPos(hal, 0, lower_panel_y);
-  down.setPos(hal, (SCREEN_WIDTH - down.getW())/2, lower_panel_y);
+  menu_up.setPos(hal, 0, lower_panel_y);
+  menu_down.setPos(hal, (SCREEN_WIDTH - menu_down.getW())/2, lower_panel_y);
   select_return.setPos(hal, SCREEN_WIDTH - select_return.getW(), lower_panel_y);
+
+  // initialize history widgets
+  history_items.setParams(SCREEN_WIDTH, SCREEN_HEIGHT - lower_panel_height);
+  history_up.setParams("\x1e", LEFT_BUTTON_ID, historyUpRelease);
+  history_down.setParams("\x1f", MIDDLE_BUTTON_ID, historyDownRelease);
+  history_return.setParams("back", RIGHT_BUTTON_ID, returnRelease);
+
+  history_items.setPos(hal, 0, 0);
+  history_up.setPos(hal, 0, lower_panel_y);
+  history_down.setPos(hal, (SCREEN_WIDTH - history_down.getW())/2, lower_panel_y);
+  history_return.setPos(hal, SCREEN_WIDTH - history_return.getW(), lower_panel_y);
+
 
   // initialize screens
   main_screen.setup();
   delta_screen.setup();
   menu_screen.setup();
+  history_screen.setup();
 
   main_screen.addWidget(&plus_minus_1);
   main_screen.addWidget(&plus_minus_5);
@@ -163,9 +215,14 @@ void setup(HAL *hal) {
   delta_screen.addWidget(&counter);
 
   menu_screen.addWidget(&menu_items);
-  menu_screen.addWidget(&up);
-  menu_screen.addWidget(&down);
+  menu_screen.addWidget(&menu_up);
+  menu_screen.addWidget(&menu_down);
   menu_screen.addWidget(&select_return);
+
+  history_screen.addWidget(&history_items);
+  history_screen.addWidget(&history_up);
+  history_screen.addWidget(&history_down);
+  history_screen.addWidget(&history_return);
 }
 
 void loop() {
