@@ -377,4 +377,102 @@ TEST(basic_tests, full_history) {
   counter_gui::loop();
 }
 
+TEST(basic_tests, delete_history) {
+  Display d;
+  HAL h(&d);
+  int timestamp = 321;
+  // start pressing the menu button
+  counter_gui::setup(&h);
+
+  // add +1; +2; +3...
+  int num_records = 10;
+  for (int i = 0; i < num_records; ++i) {
+    for (int j = 0; j < i+1; ++j)
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  }
+
+  // goto menu
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  // goto "delete history" item
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+
+  // click "delete history"
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // confirm "delete history"
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // move up in menu
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // got to history
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  expectHistoryScreen(d, {});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  // move to the menu and main screen
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, timestamp);
+
+  expectMainScreen(d, 0);
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+}
+
+TEST(basic_tests, new_count) {
+  Display d;
+  HAL h(&d);
+  int timestamp = 321;
+  // start pressing the menu button
+  counter_gui::setup(&h);
+
+  // add +1; +2; +3...
+  int num_records = 3;
+  for (int i = 0; i < num_records; ++i) {
+    for (int j = 0; j < i+1; ++j)
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  }
+
+  // goto menu
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  // goto "new count" item
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+
+  // click "new count"
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // confirm
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // move up in menu
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // got to history
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. ------"});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  // move to the menu and main screen
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, timestamp);
+
+  expectMainScreen(d, 0);
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+}
+
 #endif

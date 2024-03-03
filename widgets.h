@@ -449,6 +449,69 @@ public:
   }
 };
 
+enum HAlign{
+  LEFT,
+  MIDDLE,
+  RIGHT
+};
+
+template<int MAX_LEN = MAX_HIST_STR_LEN>
+class LabelWidget: public Widget {
+  int w = -1;
+  int h = -1;
+  char value[MAX_LEN+1];
+  HAlign a;
+public:
+
+  void setParams(int width, int height, HAlign align, const char *label) {
+    w = width;
+    h = height;
+    a = align;
+    strncpy(value, label, MAX_LEN);
+    value[MAX_LEN] = '\0';
+  }
+
+  int getW() override {
+    return w;
+  }
+
+  int getH() override {
+    return h;
+  }
+
+  void reset() override {
+  }
+
+  void update() override {
+  }
+
+  void draw() override {
+    const int str_len = strlen(value);
+    const int w_font_limit = w / (str_len*CHAR_W);
+    const int h_font_limit = h / CHAR_H;
+    const int font_size = std::min(w_font_limit, h_font_limit);
+    assert(font_size > 0);
+    int x_alignment = -1;
+    // assume y alignment as "top"
+    int y_alignment = 0;
+    switch (a){
+      case HAlign::LEFT:
+        x_alignment = 0;
+        break;
+      case HAlign::MIDDLE:
+        x_alignment = (w - font_size * CHAR_W * str_len) / 2;
+        break;
+      case HAlign::RIGHT:
+        x_alignment = w - font_size * CHAR_W * str_len;
+        break;
+    }
+    display->setTextColor(SH110X_WHITE);
+    display->setCursor(off_x + x_alignment, off_y + y_alignment);
+    display->setTextSize(font_size);
+    display->print(value);
+  }
+};
+
 class Screen {
   Widget *w[MAX_WIDGETS];
   int size = 0;
@@ -474,13 +537,26 @@ public:
 
 class AcceptScreen: public Screen {
   const char *m = nullptr;
+  LabelWidget<> common_prompt;
+  LabelWidget<> detailed_prompt;
+  TwoStateButtonWidget ok;
+  TwoStateButtonWidget cancel;
 public:
-  AcceptScreen(int screen_width, int screen_height){
-    // TODO add message label, buttton 1, button 2
-  }
-  void initialize(const char *message) {
-    m = message;
-    // TODO update label widget
+  void setup(HAL *h, int screen_width, int screen_height, const char *message,std::function<void (int)> ok_action, std::function<void (int)> cancel_action){
+    common_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, "confirm to");
+    detailed_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, message);
+    ok.setParams("ok", 0, ok_action);
+    cancel.setParams("cancel", 0, cancel_action);
+
+    common_prompt.setPos(h, 0, CHAR_H);
+    detailed_prompt.setPos(h, 0, CHAR_H*3);
+    ok.setPos(h, 0, screen_height - 11);
+    cancel.setPos(h, screen_width - cancel.getW(), screen_height - 11);
+
+    addWidget(&common_prompt);
+    addWidget(&detailed_prompt);
+    addWidget(&ok);
+    addWidget(&cancel);
   }
 };
 

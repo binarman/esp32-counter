@@ -33,6 +33,8 @@ Screen main_screen;
 Screen delta_screen;
 Screen menu_screen;
 Screen history_screen;
+AcceptScreen confirm_remove_history_screen;
+AcceptScreen confirm_new_count_screen;
 
 // counter state
 int items_counter = 1;
@@ -117,10 +119,10 @@ void selectReturnRelease(int event) {
         gotoScreen(&history_screen);
         break;
       case 1:
-        // TBD
+        gotoScreen(&confirm_remove_history_screen);
         break;
       case 2:
-        // TBD
+        gotoScreen(&confirm_new_count_screen);
         break;
     }
   }
@@ -142,6 +144,22 @@ void historyUpRelease(int event) {
 void historyDownRelease(int event) {
   if (event > 0)
     history_items.moveDown();
+}
+
+void deleteHistoryRelease(int event) {
+  if (event > 0) {
+    // delete history
+    // zero counter
+    // delete short history
+  }
+}
+
+void newCountRelease(int event) {
+  if (event > 0) {
+    // add separator in history
+    // zero counter
+    // delete short history
+  }
 }
 
 }
@@ -202,6 +220,8 @@ void setup(HAL *hal) {
   delta_screen.setup();
   menu_screen.setup();
   history_screen.setup();
+  confirm_remove_history_screen.setup(hal, SCREEN_WIDTH, SCREEN_HEIGHT, "delete history", deleteHistoryRelease, returnRelease);
+  confirm_new_count_screen.setup(hal, SCREEN_WIDTH, SCREEN_HEIGHT, "start new count", newCountRelease, returnRelease);
 
   main_screen.addWidget(&plus_minus_1);
   main_screen.addWidget(&plus_minus_5);
