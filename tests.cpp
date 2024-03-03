@@ -346,9 +346,34 @@ TEST(basic_tests, full_history) {
   // goto history
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
 
-  // test contents
+  // check history contents
   expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6"});
-  expectUpdateButtons(h, timestamp+1, false, false, false);
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  // scroll down one item
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+
+  // check scolled contents
+  expectHistoryScreen(d, {"2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6", "7. 28=21+7"});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  // scroll up one item
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+
+  // check history contents
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6"});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
+
+  // go back to manu screen
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  expectMenuScreen(d);
+  expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
 }
 
