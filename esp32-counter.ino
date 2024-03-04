@@ -10,7 +10,8 @@
 #define SENSOR_PIN_MIDDLE 27
 #define SENSOR_PIN_RIGHT 14
 
-Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SH1106G display =
+    Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 HAL hal = HAL(&display, {SENSOR_PIN_LEFT, SENSOR_PIN_MIDDLE, SENSOR_PIN_RIGHT});
 
@@ -20,7 +21,7 @@ void setup() {
 
   delay(250);
   display.begin(i2c_Address, true);
- 
+
   display.display();
   delay(1000);
   setCpuFrequencyMhz(80);

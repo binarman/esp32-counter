@@ -1,0 +1,8 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v17.0.6
+    hooks:
+      - id: clang-format
+        args: ["--style", "llvm", "-i"]
+        files: '.*\.[cpp|h|ino]'
+        stages: [commit, push, manual]

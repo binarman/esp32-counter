@@ -1,21 +1,23 @@
 #ifdef TEST_MODE
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 #include "counter_gui.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
+using ::testing::_;
 using ::testing::An;
 using ::testing::Matcher;
-using ::testing::TypedEq;
 using ::testing::Return;
 using ::testing::StrEq;
-using ::testing::_;
+using ::testing::TypedEq;
 
 #define CHAR_W 6
 #define CHAR_H 8
 
-void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2, bool btn3) {
-  // EXPECT_CALL(h, uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
+void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2,
+                         bool btn3) {
+  // EXPECT_CALL(h,
+  // uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
   // EXPECT_CALL(h, buttonPressed(0)).WillOnce(Return(btn1));
   // EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));
   // EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));
@@ -39,9 +41,10 @@ void expectMainScreen(Display &d, int counter) {
   EXPECT_CALL(d, print(Matcher<int>(counter)));
 }
 
-void expectMainScreenHistory(Display &d, const std::vector<std::string> &entries) {
-  for (int i = 0; i < entries.size(); ++i){
-    EXPECT_CALL(d, setCursor(72, i*8));
+void expectMainScreenHistory(Display &d,
+                             const std::vector<std::string> &entries) {
+  for (int i = 0; i < entries.size(); ++i) {
+    EXPECT_CALL(d, setCursor(72, i * 8));
     EXPECT_CALL(d, print(Matcher<const char *>(StrEq(entries[i]))));
   }
 }
@@ -60,7 +63,7 @@ void expectDeltaScreen(Display &d, int counter, int delta) {
     EXPECT_CALL(d, print(Matcher<int>(delta))).Times(2);
   } else {
     EXPECT_CALL(d, print(Matcher<int>(delta)));
-    EXPECT_CALL(d, print(Matcher<int>(counter+delta)));
+    EXPECT_CALL(d, print(Matcher<int>(counter + delta)));
   }
 
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("+1/-1"))));
@@ -78,7 +81,7 @@ void expectMenuScreen(Display &d) {
   EXPECT_CALL(d, setTextSize(1)).Times(4);
   EXPECT_CALL(d, setCursor(0, 0));
   EXPECT_CALL(d, setCursor(0, CHAR_H));
-  EXPECT_CALL(d, setCursor(0, CHAR_H*2));
+  EXPECT_CALL(d, setCursor(0, CHAR_H * 2));
   EXPECT_CALL(d, setCursor(0, 53));
   EXPECT_CALL(d, setCursor(61, 53));
   EXPECT_CALL(d, setCursor(80, 53));
@@ -100,28 +103,31 @@ void expectHistoryScreen(Display &d, const std::vector<std::string> &entries) {
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1e"))));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1f"))));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("back"))));
-  for (int i = 0; i < entries.size(); ++i){
-    EXPECT_CALL(d, setCursor(0, i*8));
+  for (int i = 0; i < entries.size(); ++i) {
+    EXPECT_CALL(d, setCursor(0, i * 8));
     EXPECT_CALL(d, print(Matcher<const char *>(StrEq(entries[i]))));
   }
 }
 
-void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2, float btn3) {
+void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2,
+                                     float btn3) {
   if (btn1 >= 0)
-    EXPECT_CALL(d, drawFastHLine(0, 63, (int)(btn1*5*CHAR_W), SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), SH110X_WHITE));
   if (btn1 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(3*6, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(3 * 6, 61, 2 * CHAR_W, SH110X_WHITE));
   else if (btn1 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(0, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, SH110X_WHITE));
 
   if (btn2 >= 0)
     assert(false && "todo implement");
 
   if (btn3 > 0)
-    EXPECT_CALL(d, drawFastHLine(104, 61, 4*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(104, 61, 4 * CHAR_W, SH110X_WHITE));
 }
 
-void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2, float btn3) {
+void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2,
+                                     float btn3) {
   if (btn1 >= 0)
     assert(false && "todo implemnet");
 
@@ -129,44 +135,55 @@ void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2, float b
     assert(false && "todo implement");
 
   if (btn3 >= 0)
-    EXPECT_CALL(d, drawFastHLine(80, 63, (int)(btn3*8*CHAR_W), SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(80, 63, (int)(btn3 * 8 * CHAR_W), SH110X_WHITE));
   if (btn3 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(80+4*CHAR_W, 61, 4*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(80 + 4 * CHAR_W, 61, 4 * CHAR_W, SH110X_WHITE));
   else if (btn3 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(80, 61, 3*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(80, 61, 3 * CHAR_W, SH110X_WHITE));
 }
 
-void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2, float btn3) {
+void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2,
+                                      float btn3) {
   if (btn1 >= 0)
-    EXPECT_CALL(d, drawFastHLine(0, 63, (int)(btn1*5*CHAR_W), SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), SH110X_WHITE));
   if (btn1 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(3*CHAR_W, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(3 * CHAR_W, 61, 2 * CHAR_W, SH110X_WHITE));
   else if (btn1 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(0, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, SH110X_WHITE));
 
   if (btn2 >= 0)
-    EXPECT_CALL(d, drawFastHLine(49, 63, (int)(btn2*5*CHAR_W), SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(49, 63, (int)(btn2 * 5 * CHAR_W), SH110X_WHITE));
   if (btn2 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(49 + 3*CHAR_W, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(49 + 3 * CHAR_W, 61, 2 * CHAR_W, SH110X_WHITE));
   else if (btn2 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(49, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(49, 61, 2 * CHAR_W, SH110X_WHITE));
 
   if (btn3 >= 0)
-    EXPECT_CALL(d, drawFastHLine(86, 63, (int)(btn3*7*CHAR_W), SH110X_WHITE));
+    EXPECT_CALL(d,
+                drawFastHLine(86, 63, (int)(btn3 * 7 * CHAR_W), SH110X_WHITE));
   if (btn3 == 1.0)
     assert(false && "todo implement");
   else if (btn3 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(86, 61, 2*CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(86, 61, 2 * CHAR_W, SH110X_WHITE));
 }
 
-void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3, int press_time, int &timestamp) {
+void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
+                                        int press_time, int &timestamp) {
   auto &d = *h.display();
   EXPECT_CALL(d, setTextColor(::testing::_)).WillRepeatedly(Return());
   EXPECT_CALL(d, setTextSize(::testing::_)).WillRepeatedly(Return());
   EXPECT_CALL(d, setCursor(::testing::_, testing::_)).WillRepeatedly(Return());
-  EXPECT_CALL(d, print(Matcher<const char *>(::testing::_))).WillRepeatedly(Return(0));
+  EXPECT_CALL(d, print(Matcher<const char *>(::testing::_)))
+      .WillRepeatedly(Return(0));
   EXPECT_CALL(d, print(Matcher<int>(::testing::_))).WillRepeatedly(Return(0));
-  EXPECT_CALL(d, drawFastHLine(::testing::_, ::testing::_, ::testing::_, ::testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(
+      d, drawFastHLine(::testing::_, ::testing::_, ::testing::_, ::testing::_))
+      .WillRepeatedly(Return());
 
   // start pressing
   expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
@@ -339,7 +356,7 @@ TEST(basic_tests, full_history) {
   // add +1; +2; +3...
   int num_records = 10;
   for (int i = 0; i < num_records; ++i) {
-    for (int j = 0; j < i+1; ++j)
+    for (int j = 0; j < i + 1; ++j)
       pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
     pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
   }
@@ -351,7 +368,8 @@ TEST(basic_tests, full_history) {
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
 
   // check history contents
-  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6"});
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4",
+                          "5. 15=10+5", "6. 21=15+6"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
@@ -360,7 +378,8 @@ TEST(basic_tests, full_history) {
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
 
   // check scolled contents
-  expectHistoryScreen(d, {"2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6", "7. 28=21+7"});
+  expectHistoryScreen(d, {"2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5",
+                          "6. 21=15+6", "7. 28=21+7"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
@@ -369,7 +388,8 @@ TEST(basic_tests, full_history) {
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
 
   // check history contents
-  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5", "6. 21=15+6"});
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4",
+                          "5. 15=10+5", "6. 21=15+6"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
@@ -391,7 +411,7 @@ TEST(basic_tests, delete_history) {
   // add +1; +2; +3...
   int num_records = 10;
   for (int i = 0; i < num_records; ++i) {
-    for (int j = 0; j < i+1; ++j)
+    for (int j = 0; j < i + 1; ++j)
       pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
     pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
   }
@@ -441,7 +461,7 @@ TEST(basic_tests, new_count) {
   // add +1; +2; +3...
   int num_records = 3;
   for (int i = 0; i < num_records; ++i) {
-    for (int j = 0; j < i+1; ++j)
+    for (int j = 0; j < i + 1; ++j)
       pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
     pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
   }

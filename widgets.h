@@ -2,11 +2,11 @@
 #define WIDGETS_H
 
 #include "hal.h"
-#include <numeric>
-#include <initializer_list>
-#include <functional>
-#include <string.h>
 #include <cassert>
+#include <functional>
+#include <initializer_list>
+#include <numeric>
+#include <string.h>
 
 #define MAX_HIST_STR_LEN 21
 #define CHAR_W 6
@@ -16,22 +16,23 @@
 
 /**
  * @brief abstract class controlling button state
- * 
+ *
  * Button holds several "milestone" timestamps.
  * Each milestone switches button to new state.
- * 
+ *
  * when button is not pressed, it has state -1
  * when button is pressed, but did not reach any milestone yet, it has state 0
  * each reached milestone increases state counter by 1
  */
-template <int NUM_MILESTONES>
-class ButtonState {
+template <int NUM_MILESTONES> class ButtonState {
   int state;
   int last_press_time;
   int last_update_time;
   int milestones[NUM_MILESTONES];
+
 public:
-  ButtonState(std::initializer_list<int> milestones_time) : state(-1), last_press_time(0), last_update_time(0) {
+  ButtonState(std::initializer_list<int> milestones_time)
+      : state(-1), last_press_time(0), last_update_time(0) {
     assert(milestones_time.size() == NUM_MILESTONES);
     std::copy(milestones_time.begin(), milestones_time.end(), milestones);
   }
@@ -44,7 +45,7 @@ public:
 
   int updateState(long timestamp, bool pressed) {
     last_update_time = timestamp;
-    if (!pressed){
+    if (!pressed) {
       int emit_state = state;
       state = -1;
       return emit_state;
@@ -59,9 +60,7 @@ public:
     return -1;
   }
 
-  int getState() {
-    return state;
-  }
+  int getState() { return state; }
 
   int getTimeFromPress() {
     if (state == -1)
@@ -84,6 +83,7 @@ protected:
   Display *display;
   int off_x = 0;
   int off_y = 0;
+
 public:
   void setPos(HAL *h, int offset_x, int offset_y) {
     hal = h;
@@ -91,7 +91,7 @@ public:
     off_x = offset_x;
     off_y = offset_y;
   }
-  
+
   virtual ~Widget() = default;
   int getX() { return off_x; }
   int getY() { return off_y; }
@@ -102,14 +102,16 @@ public:
   virtual void draw() = 0;
 };
 
-class ThreeStateButtonWidget: public Widget {
+class ThreeStateButtonWidget : public Widget {
   const char *short_press_text = nullptr;
   const char *long_press_text = nullptr;
   int button_id = -1;
   ButtonState<2> state = {50, 1000};
   std::function<void(int)> on_release = nullptr;
+
 public:
-  void setParams(const char *short_press_label, const char *long_press_label, int btn_id, const std::function<void(int)> &callback) {
+  void setParams(const char *short_press_label, const char *long_press_label,
+                 int btn_id, const std::function<void(int)> &callback) {
     short_press_text = short_press_label;
     long_press_text = long_press_label;
     button_id = btn_id;
@@ -123,15 +125,11 @@ public:
     return (short_press_length + long_press_length + 1) * CHAR_W;
   }
 
-  int getH() override {
-    return CHAR_H+3;
-  }
+  int getH() override { return CHAR_H + 3; }
 
-  void reset() override{
-    state.reset();
-  }
+  void reset() override { state.reset(); }
 
-  void update() override{
+  void update() override {
     bool button_state = hal->buttonPressed(button_id);
     auto timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, button_state);
@@ -146,7 +144,7 @@ public:
     int long_press_length = strlen(long_press_text) * CHAR_W;
     int first_part_length = short_press_length + CHAR_W;
 
-    char full_label[MAX_LABEL_LEN+1] = {0};
+    char full_label[MAX_LABEL_LEN + 1] = {0};
     strncat(full_label, short_press_text, MAX_LABEL_LEN);
     strncat(full_label, "/", MAX_LABEL_LEN);
     strncat(full_label, long_press_text, MAX_LABEL_LEN);
@@ -156,26 +154,31 @@ public:
     display->print(full_label);
 
     if (s == 1)
-      display->drawFastHLine(off_x, off_y + CHAR_H, short_press_length, SH110X_WHITE);
+      display->drawFastHLine(off_x, off_y + CHAR_H, short_press_length,
+                             SH110X_WHITE);
     if (s == 2)
-      display->drawFastHLine(off_x + first_part_length, off_y + CHAR_H, long_press_length, SH110X_WHITE);
+      display->drawFastHLine(off_x + first_part_length, off_y + CHAR_H,
+                             long_press_length, SH110X_WHITE);
     // draw progress bar
     float progress = state.getProgress();
     if (progress > 0.0f) {
       int full_length = first_part_length + long_press_length;
       int progress_bar_len = full_length * progress;
-      display->drawFastHLine(off_x, off_y + CHAR_H + 2, progress_bar_len, SH110X_WHITE);
+      display->drawFastHLine(off_x, off_y + CHAR_H + 2, progress_bar_len,
+                             SH110X_WHITE);
     }
   }
 };
 
-class TwoStateButtonWidget: public Widget {
+class TwoStateButtonWidget : public Widget {
   const char *press_text = nullptr;
   int button_id = -1;
   ButtonState<1> state = {50};
   std::function<void(int)> on_release = nullptr;
+
 public:
-  void setParams(const char *press_label, int btn_id, const std::function<void(int)> callback) {
+  void setParams(const char *press_label, int btn_id,
+                 const std::function<void(int)> callback) {
     press_text = press_label;
     button_id = btn_id;
     state.reset();
@@ -187,22 +190,18 @@ public:
     return press_text_length * CHAR_W;
   }
 
-  int getH() override {
-    return CHAR_H + 1;
-  }
+  int getH() override { return CHAR_H + 1; }
 
-  void reset() override{
-    state.reset();
-  }
+  void reset() override { state.reset(); }
 
-  void update() override{
+  void update() override {
     bool button_state = hal->buttonPressed(button_id);
     int timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, button_state);
     on_release(event);
   }
 
-  void draw() override{
+  void draw() override {
     int s = state.getState();
     display->setTextColor(SH110X_WHITE);
     int press_text_length = strlen(press_text) * CHAR_W;
@@ -214,16 +213,15 @@ public:
   }
 };
 
-template<class Derived, int MAX_ITEM_LEN>
-class ListWidgetBase: public Widget {
+template <class Derived, int MAX_ITEM_LEN>
+class ListWidgetBase : public Widget {
 protected:
   int w = -1;
   int h = -1;
   int first_visible_item = 0;
 
-  Derived &d() {
-    return *static_cast<Derived *>(this);
-  }
+  Derived &d() { return *static_cast<Derived *>(this); }
+
 public:
   void setParams(int width, int height) {
     w = width;
@@ -242,24 +240,18 @@ public:
       first_visible_item--;
   }
 
-  int getW() override {
-    return w;
-  }
+  int getW() override { return w; }
 
-  int getH() override {
-    return h;
-  }
+  int getH() override { return h; }
 
-  void reset() override{
-    first_visible_item = 0;
-  }
+  void reset() override { first_visible_item = 0; }
 
   void draw() override {
     display->setTextColor(SH110X_WHITE);
     const int size = d().getSize();
     int num_items_to_print = std::min(h / CHAR_H, size - first_visible_item);
     int max_item_width = std::min(w / CHAR_W, MAX_ITEM_LEN);
-    char print_buffer[MAX_ITEM_LEN+1];
+    char print_buffer[MAX_ITEM_LEN + 1];
     display->setTextSize(1);
     for (int i = 0; i < num_items_to_print; ++i) {
       display->setCursor(off_x, off_y + i * CHAR_H);
@@ -270,12 +262,17 @@ public:
   }
 };
 
-template<int MAX_ITEMS, int MAX_ITEM_LEN = MAX_HIST_STR_LEN>
-class OverwritingListWidget: public ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>, MAX_ITEM_LEN> {
-  char items[MAX_ITEMS][MAX_ITEM_LEN+1];
+template <int MAX_ITEMS, int MAX_ITEM_LEN = MAX_HIST_STR_LEN>
+class OverwritingListWidget
+    : public ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>,
+                            MAX_ITEM_LEN> {
+  char items[MAX_ITEMS][MAX_ITEM_LEN + 1];
   int size = 0;
-  int insert_point = 0; // items organized in rolling list, if storage overflows, overwrite old items
-  using Base = ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>, MAX_ITEM_LEN>;
+  int insert_point = 0; // items organized in rolling list, if storage
+                        // overflows, overwrite old items
+  using Base = ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>,
+                              MAX_ITEM_LEN>;
+
 public:
   void setParams(int width, int height) {
     reset();
@@ -290,9 +287,7 @@ public:
     insert_point = (insert_point + 1) % MAX_ITEMS;
   }
 
-  int getSize() {
-    return size;
-  }
+  int getSize() { return size; }
 
   void getItem(int i, char *buffer, int max_str_len) {
     int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
@@ -307,16 +302,19 @@ public:
     insert_point = 0;
   }
 
-  void update() override {
-  }
+  void update() override {}
 };
 
-template<int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
-class ListWithSelectorWidget: public ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>, MAX_LEN> {
+template <int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
+class ListWithSelectorWidget
+    : public ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>,
+                            MAX_LEN> {
   int sel_pos = 0;
-  char items[MAX_ITEMS][MAX_LEN+1];
+  char items[MAX_ITEMS][MAX_LEN + 1];
   int size = 0;
-  using Base = ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>, MAX_LEN>;
+  using Base =
+      ListWidgetBase<ListWithSelectorWidget<MAX_ITEMS, MAX_LEN>, MAX_LEN>;
+
 public:
   void setParams(int width, int height, int selector_pos) {
     Base::setParams(width, height);
@@ -331,9 +329,7 @@ public:
     size++;
   }
 
-  int getSize() {
-    return size;
-  }
+  int getSize() { return size; }
 
   void getItem(int i, char *buffer, int max_str_len) {
     assert(max_str_len > 1);
@@ -352,20 +348,18 @@ public:
     sel_pos = 0;
   }
 
-  void update() override {
-  }
+  void update() override {}
 
   void adjustVisibleAreaToSel() {
     if (sel_pos < Base::first_visible_item)
       Base::first_visible_item = sel_pos;
-    int last_visible_item = Base::first_visible_item + this->getH() / CHAR_H - 1;
+    int last_visible_item =
+        Base::first_visible_item + this->getH() / CHAR_H - 1;
     if (sel_pos > last_visible_item)
       Base::first_visible_item += sel_pos - last_visible_item;
   }
 
-  int getSelPos() {
-    return sel_pos;
-  }
+  int getSelPos() { return sel_pos; }
 
   void moveSelUp() {
     sel_pos = std::max(sel_pos - 1, 0);
@@ -375,21 +369,20 @@ public:
   void moveSelDown() {
     sel_pos = std::min(sel_pos + 1, size - 1);
     adjustVisibleAreaToSel();
-   }
+  }
 };
 
-class CounterWidget: public Widget {
+class CounterWidget : public Widget {
 public:
-  enum State {
-    ShowHistory,
-    ShowDelta
-  };
+  enum State { ShowHistory, ShowDelta };
+
 private:
   State state = State::ShowHistory;
   int counter = 0;
   int delta = 0;
   int w = -1;
   int h = -1;
+
 public:
   void setParams(int width, int height) {
     reset();
@@ -397,13 +390,9 @@ public:
     h = height;
   }
 
-  int getDelta() {
-    return delta;
-  }
+  int getDelta() { return delta; }
 
-  int getValue() {
-    return counter;
-  }
+  int getValue() { return counter; }
 
   void changeDelta(int change) {
     delta += change;
@@ -421,13 +410,9 @@ public:
     state = State::ShowHistory;
   }
 
-  int getW() override {
-    return w;
-  }
+  int getW() override { return w; }
 
-  int getH() override {
-    return h;
-  }
+  int getH() override { return h; }
 
   void reset() override {
     counter = 0;
@@ -435,8 +420,7 @@ public:
     state = State::ShowHistory;
   }
 
-  void update() override {
-  }
+  void update() override {}
 
   void draw() override {
     constexpr int font_size = 5;
@@ -459,20 +443,15 @@ public:
   }
 };
 
-enum HAlign{
-  LEFT,
-  MIDDLE,
-  RIGHT
-};
+enum HAlign { LEFT, MIDDLE, RIGHT };
 
-template<int MAX_LEN = MAX_HIST_STR_LEN>
-class LabelWidget: public Widget {
+template <int MAX_LEN = MAX_HIST_STR_LEN> class LabelWidget : public Widget {
   int w = -1;
   int h = -1;
-  char value[MAX_LEN+1];
+  char value[MAX_LEN + 1];
   HAlign a;
-public:
 
+public:
   void setParams(int width, int height, HAlign align, const char *label) {
     w = width;
     h = height;
@@ -481,39 +460,33 @@ public:
     value[MAX_LEN] = '\0';
   }
 
-  int getW() override {
-    return w;
-  }
+  int getW() override { return w; }
 
-  int getH() override {
-    return h;
-  }
+  int getH() override { return h; }
 
-  void reset() override {
-  }
+  void reset() override {}
 
-  void update() override {
-  }
+  void update() override {}
 
   void draw() override {
     const int str_len = strlen(value);
-    const int w_font_limit = w / (str_len*CHAR_W);
+    const int w_font_limit = w / (str_len * CHAR_W);
     const int h_font_limit = h / CHAR_H;
     const int font_size = std::min(w_font_limit, h_font_limit);
     assert(font_size > 0);
     int x_alignment = -1;
     // assume y alignment as "top"
     int y_alignment = 0;
-    switch (a){
-      case HAlign::LEFT:
-        x_alignment = 0;
-        break;
-      case HAlign::MIDDLE:
-        x_alignment = (w - font_size * CHAR_W * str_len) / 2;
-        break;
-      case HAlign::RIGHT:
-        x_alignment = w - font_size * CHAR_W * str_len;
-        break;
+    switch (a) {
+    case HAlign::LEFT:
+      x_alignment = 0;
+      break;
+    case HAlign::MIDDLE:
+      x_alignment = (w - font_size * CHAR_W * str_len) / 2;
+      break;
+    case HAlign::RIGHT:
+      x_alignment = w - font_size * CHAR_W * str_len;
+      break;
     }
     display->setTextColor(SH110X_WHITE);
     display->setCursor(off_x + x_alignment, off_y + y_alignment);
@@ -525,14 +498,11 @@ public:
 class Screen {
   Widget *w[MAX_WIDGETS];
   int size = 0;
-public:
-  void setup() {
-    size = 0;
-  }
 
-  void addWidget(Widget *widget){
-    w[size++] = widget;
-  }
+public:
+  void setup() { size = 0; }
+
+  void addWidget(Widget *widget) { w[size++] = widget; }
 
   void update() {
     for (int i = 0; i < size; ++i)
@@ -545,14 +515,17 @@ public:
   }
 };
 
-class AcceptScreen: public Screen {
+class AcceptScreen : public Screen {
   const char *m = nullptr;
   LabelWidget<> common_prompt;
   LabelWidget<> detailed_prompt;
   TwoStateButtonWidget ok;
   TwoStateButtonWidget cancel;
+
 public:
-  void setup(HAL *h, int screen_width, int screen_height, const char *message,std::function<void (int)> ok_action, std::function<void (int)> cancel_action){
+  void setup(HAL *h, int screen_width, int screen_height, const char *message,
+             std::function<void(int)> ok_action,
+             std::function<void(int)> cancel_action) {
     Screen::setup();
     common_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, "confirm to");
     detailed_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, message);
@@ -560,7 +533,7 @@ public:
     cancel.setParams("cancel", 2, cancel_action);
 
     common_prompt.setPos(h, 0, CHAR_H);
-    detailed_prompt.setPos(h, 0, CHAR_H*3);
+    detailed_prompt.setPos(h, 0, CHAR_H * 3);
     ok.setPos(h, 0, screen_height - 11);
     cancel.setPos(h, screen_width - cancel.getW(), screen_height - 11);
 
