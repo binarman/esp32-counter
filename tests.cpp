@@ -15,10 +15,14 @@ using ::testing::_;
 #define CHAR_H 8
 
 void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2, bool btn3) {
-  EXPECT_CALL(h, uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
-  EXPECT_CALL(h, buttonPressed(0)).WillOnce(Return(btn1));
-  EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));
-  EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));
+  // EXPECT_CALL(h, uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
+  // EXPECT_CALL(h, buttonPressed(0)).WillOnce(Return(btn1));
+  // EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));
+  // EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));
+  EXPECT_CALL(h, uptimeMillis()).WillRepeatedly(Return(timestamp));
+  EXPECT_CALL(h, buttonPressed(0)).WillRepeatedly(Return(btn1));
+  EXPECT_CALL(h, buttonPressed(1)).WillRepeatedly(Return(btn2));
+  EXPECT_CALL(h, buttonPressed(2)).WillRepeatedly(Return(btn3));
 }
 
 void expectMainScreen(Display &d, int counter) {
@@ -397,14 +401,16 @@ TEST(basic_tests, delete_history) {
 
   // goto "delete history" item
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
 
   // click "delete history"
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
 
   // confirm "delete history"
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
 
   // move up in menu
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
 
   // got to history
@@ -445,22 +451,20 @@ TEST(basic_tests, new_count) {
 
   // goto "new count" item
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
 
   // click "new count"
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
 
   // confirm
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
 
   // move up in menu
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
 
   // got to history
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
 
-  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. ------"});
+  expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "------"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();

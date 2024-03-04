@@ -250,6 +250,10 @@ public:
     return h;
   }
 
+  void reset() override{
+    first_visible_item = 0;
+  }
+
   void draw() override {
     display->setTextColor(SH110X_WHITE);
     const int size = d().getSize();
@@ -274,9 +278,8 @@ class OverwritingListWidget: public ListWidgetBase<OverwritingListWidget<MAX_ITE
   using Base = ListWidgetBase<OverwritingListWidget<MAX_ITEMS, MAX_ITEM_LEN>, MAX_ITEM_LEN>;
 public:
   void setParams(int width, int height) {
+    reset();
     Base::setParams(width, height);
-    size = 0;
-    insert_point = 0;
   }
 
   void addItem(const char *item) {
@@ -299,6 +302,9 @@ public:
   }
 
   void reset() override {
+    Base::reset();
+    size = 0;
+    insert_point = 0;
   }
 
   void update() override {
@@ -341,6 +347,9 @@ public:
   }
 
   void reset() override {
+    Base::reset();
+    size = 0;
+    sel_pos = 0;
   }
 
   void update() override {
@@ -383,9 +392,7 @@ private:
   int h = -1;
 public:
   void setParams(int width, int height) {
-    state = State::ShowHistory;
-    delta = 0;
-    counter = 0;
+    reset();
     w = width;
     h = height;
   }
@@ -423,6 +430,9 @@ public:
   }
 
   void reset() override {
+    counter = 0;
+    delta = 0;
+    state = State::ShowHistory;
   }
 
   void update() override {
@@ -543,10 +553,11 @@ class AcceptScreen: public Screen {
   TwoStateButtonWidget cancel;
 public:
   void setup(HAL *h, int screen_width, int screen_height, const char *message,std::function<void (int)> ok_action, std::function<void (int)> cancel_action){
+    Screen::setup();
     common_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, "confirm to");
     detailed_prompt.setParams(screen_width, CHAR_H, HAlign::MIDDLE, message);
     ok.setParams("ok", 0, ok_action);
-    cancel.setParams("cancel", 0, cancel_action);
+    cancel.setParams("cancel", 2, cancel_action);
 
     common_prompt.setPos(h, 0, CHAR_H);
     detailed_prompt.setPos(h, 0, CHAR_H*3);

@@ -119,10 +119,10 @@ void selectReturnRelease(int event) {
         gotoScreen(&history_screen);
         break;
       case 1:
-        gotoScreen(&confirm_remove_history_screen);
+        gotoScreen(&confirm_new_count_screen);
         break;
       case 2:
-        gotoScreen(&confirm_new_count_screen);
+        gotoScreen(&confirm_remove_history_screen);
         break;
     }
   }
@@ -148,17 +148,19 @@ void historyDownRelease(int event) {
 
 void deleteHistoryRelease(int event) {
   if (event > 0) {
-    // delete history
-    // zero counter
-    // delete short history
+    history_items.reset();
+    counter.reset();
+    short_history.reset();
+    popScreen();
   }
 }
 
 void newCountRelease(int event) {
   if (event > 0) {
-    // add separator in history
-    // zero counter
-    // delete short history
+    history_items.addItem("------");
+    counter.reset();
+    short_history.reset();
+    popScreen();
   }
 }
 
@@ -183,7 +185,7 @@ void setup(HAL *hal) {
   menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
   commit_reject.setPos(hal, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
 
-  // initialize reset of main screen widgets
+  // initialize main screen widgets
   counter.setPos(hal, 0, 0);
   short_history.setPos(hal, 72, 0);
   counter.setParams(72, lower_panel_y); // todo fix dimensions of counter
