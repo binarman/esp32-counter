@@ -16,15 +16,32 @@ using ::testing::TypedEq;
 
 void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2,
                          bool btn3) {
-  // EXPECT_CALL(h,
-  // uptimeMillis()).WillOnce(Return(timestamp)).WillOnce(Return(timestamp)).WillOnce(Return(timestamp));
-  // EXPECT_CALL(h, buttonPressed(0)).WillOnce(Return(btn1));
-  // EXPECT_CALL(h, buttonPressed(1)).WillOnce(Return(btn2));
-  // EXPECT_CALL(h, buttonPressed(2)).WillOnce(Return(btn3));
   EXPECT_CALL(h, uptimeMillis()).WillRepeatedly(Return(timestamp));
   EXPECT_CALL(h, buttonPressed(0)).WillRepeatedly(Return(btn1));
   EXPECT_CALL(h, buttonPressed(1)).WillRepeatedly(Return(btn2));
   EXPECT_CALL(h, buttonPressed(2)).WillRepeatedly(Return(btn3));
+}
+
+void expectBatteryState(HAL &h, float state) {
+  EXPECT_CALL(h, getPowerState()).WillRepeatedly(Return(state));
+}
+
+void expectBatteryDraw(Display &d, float state = -1) {
+  const int off_x = 112;
+  const int off_y = 0;
+  EXPECT_CALL(d, drawRect(off_x + 1, off_y, 15, 7, SH110X_WHITE))
+      .WillRepeatedly(Return());
+  EXPECT_CALL(d, drawFastVLine(off_x, off_y + 1, 5, SH110X_WHITE))
+      .WillRepeatedly(Return());
+  if (state > 0.75 || state < 0)
+    EXPECT_CALL(d, fillRect(off_x + 3, off_y + 2, 3, 3, SH110X_WHITE))
+        .WillRepeatedly(Return());
+  if (state > 0.5 || state < 0)
+    EXPECT_CALL(d, fillRect(off_x + 7, off_y + 2, 3, 3, SH110X_WHITE))
+        .WillRepeatedly(Return());
+  if (state > 0.25 || state < 0)
+    EXPECT_CALL(d, fillRect(off_x + 11, off_y + 2, 3, 3, SH110X_WHITE))
+        .WillRepeatedly(Return());
 }
 
 void expectMainScreen(Display &d, int counter) {
@@ -199,11 +216,15 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
 
   ::testing::Mock::VerifyAndClearExpectations(&d);
   ::testing::Mock::VerifyAndClearExpectations(&h);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
 }
 
 TEST(basic_tests, main_screen) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
   expectUpdateButtons(h, 123, false, false, false);
   expectMainScreen(d, 0);
   counter_gui::setup(&h);
@@ -214,6 +235,8 @@ TEST(basic_tests, add_counter_plus1) {
   Display d;
   HAL h(&d);
   constexpr int start_time = 321;
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
   // start pressing the +1/-1 button
   expectUpdateButtons(h, start_time, true, false, false);
   expectMainScreen(d, 0);
@@ -257,6 +280,9 @@ TEST(basic_tests, add_counter_plus1) {
 TEST(basic_tests, add_counter_plus1_minus5) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
   counter_gui::setup(&h);
   int timestamp = 321;
   // pressing the +1/-1 button
@@ -300,6 +326,9 @@ TEST(basic_tests, add_counter_plus1_minus5) {
 TEST(basic_tests, go_to_menu) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
   constexpr int start_time = 321;
   // start pressing the menu button
   expectUpdateButtons(h, start_time, false, false, true);
@@ -349,6 +378,9 @@ TEST(basic_tests, go_to_menu) {
 TEST(basic_tests, full_history) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
   int timestamp = 321;
   // start pressing the menu button
   counter_gui::setup(&h);
@@ -404,6 +436,9 @@ TEST(basic_tests, full_history) {
 TEST(basic_tests, delete_history) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
   int timestamp = 321;
   // start pressing the menu button
   counter_gui::setup(&h);
@@ -454,6 +489,9 @@ TEST(basic_tests, delete_history) {
 TEST(basic_tests, new_count) {
   Display d;
   HAL h(&d);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
   int timestamp = 321;
   // start pressing the menu button
   counter_gui::setup(&h);

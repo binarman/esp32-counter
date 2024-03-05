@@ -11,6 +11,8 @@
 #define MAX_SCREEN_DEPTH 5
 
 namespace {
+BatteryWidget battery;
+
 ThreeStateButtonWidget plus_minus_1;
 ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
@@ -169,6 +171,10 @@ void setup(HAL *hal) {
   items_counter = 1;
   screen[0] = &main_screen;
   const int lower_panel_height = 11;
+  // initialize battery widget
+  battery.setParams();
+  battery.setPos(hal, SCREEN_WIDTH - battery.getW(), 0);
+
   // initialize main screen and delta widgets
   plus_minus_1.setParams("+1", "-1", LEFT_BUTTON_ID, adjust1Release);
   plus_minus_5.setParams("+5", "-5", MIDDLE_BUTTON_ID, adjust5Release);
@@ -232,21 +238,29 @@ void setup(HAL *hal) {
   main_screen.addWidget(&menu);
   main_screen.addWidget(&counter);
   main_screen.addWidget(&short_history);
+  main_screen.addWidget(&battery);
 
   delta_screen.addWidget(&plus_minus_1);
   delta_screen.addWidget(&plus_minus_5);
   delta_screen.addWidget(&commit_reject);
   delta_screen.addWidget(&counter);
+  delta_screen.addWidget(&battery);
 
   menu_screen.addWidget(&menu_items);
   menu_screen.addWidget(&menu_up);
   menu_screen.addWidget(&menu_down);
   menu_screen.addWidget(&select_return);
+  menu_screen.addWidget(&battery);
 
   history_screen.addWidget(&history_items);
   history_screen.addWidget(&history_up);
   history_screen.addWidget(&history_down);
   history_screen.addWidget(&history_return);
+  history_screen.addWidget(&battery);
+
+  confirm_remove_history_screen.addWidget(&battery);
+
+  confirm_new_count_screen.addWidget(&battery);
 }
 
 void loop() {

@@ -25,6 +25,12 @@ public:
   MOCK_METHOD(size_t, print, (const char s[]));
   MOCK_METHOD(size_t, print, (char c));
   MOCK_METHOD(size_t, print, (int val));
+  MOCK_METHOD(void, drawRect,
+              (uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
+               uint16_t color));
+  MOCK_METHOD(void, fillRect,
+              (uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
+               uint16_t color));
 };
 
 class HAL {
@@ -37,6 +43,7 @@ public:
 
   MOCK_METHOD(bool, buttonPressed, (int button_no));
   MOCK_METHOD(unsigned long, uptimeMillis, ());
+  MOCK_METHOD(float, getPowerState, ());
 };
 
 #else
@@ -67,6 +74,8 @@ public:
   }
 
   unsigned long uptimeMillis() { return millis(); }
+
+  float getPowerState() { return (millis() % 5000) / 5000.0; }
 };
 
 #endif

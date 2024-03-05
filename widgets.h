@@ -495,6 +495,28 @@ public:
   }
 };
 
+class BatteryWidget : public Widget {
+  float state = 0.0f;
+
+public:
+  void setParams() { reset(); }
+
+  int getW() override { return 16; }
+  int getH() override { return 7; }
+  void reset() override { state = 0; }
+  void update() override { state = hal->getPowerState(); }
+  void draw() override {
+    display->drawRect(off_x + 1, off_y, 15, 7, SH110X_WHITE);
+    display->drawFastVLine(off_x, off_y + 1, 5, SH110X_WHITE);
+    if (state > 0.75)
+      display->fillRect(off_x + 3, off_y + 2, 3, 3, SH110X_WHITE);
+    if (state > 0.5)
+      display->fillRect(off_x + 7, off_y + 2, 3, 3, SH110X_WHITE);
+    if (state > 0.25)
+      display->fillRect(off_x + 11, off_y + 2, 3, 3, SH110X_WHITE);
+  }
+};
+
 class Screen {
   Widget *w[MAX_WIDGETS];
   int size = 0;
