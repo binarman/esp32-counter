@@ -372,77 +372,6 @@ public:
   }
 };
 
-class CounterWidget : public Widget {
-public:
-  enum State { ShowHistory, ShowDelta };
-
-private:
-  State state = State::ShowHistory;
-  int counter = 0;
-  int delta = 0;
-  int w = -1;
-  int h = -1;
-
-public:
-  void setParams(int width, int height) {
-    reset();
-    w = width;
-    h = height;
-  }
-
-  int getDelta() { return delta; }
-
-  int getValue() { return counter; }
-
-  void changeDelta(int change) {
-    delta += change;
-    state = State::ShowDelta;
-  }
-
-  void commitDelta() {
-    counter += delta;
-    delta = 0;
-    state = State::ShowHistory;
-  }
-
-  void rejectDelta() {
-    delta = 0;
-    state = State::ShowHistory;
-  }
-
-  int getW() override { return w; }
-
-  int getH() override { return h; }
-
-  void reset() override {
-    counter = 0;
-    delta = 0;
-    state = State::ShowHistory;
-  }
-
-  void update() override {}
-
-  void draw() override {
-    constexpr int font_size = 5;
-    constexpr int max_counter_digits = 3;
-    constexpr int max_counter_len = font_size * max_counter_digits * CHAR_W;
-    display->setTextColor(SH110X_WHITE);
-    display->setCursor(off_x, off_y);
-    display->setTextSize(5);
-    display->print(counter);
-    if (state == State::ShowDelta) {
-      display->setTextSize(1);
-      display->setCursor(off_x + max_counter_len, off_y);
-      if (delta >= 0)
-        display->print("+");
-      display->print(delta);
-      display->setCursor(off_x + max_counter_len, off_y + CHAR_H);
-      display->print("=");
-      display->print(counter + delta);
-    }
-  }
-};
-
 enum HAlign { LEFT, MIDDLE, RIGHT };
 
 template <int MAX_LEN = MAX_HIST_STR_LEN> class LabelWidget : public Widget {
@@ -452,12 +381,22 @@ template <int MAX_LEN = MAX_HIST_STR_LEN> class LabelWidget : public Widget {
   HAlign a;
 
 public:
-  void setParams(int width, int height, HAlign align, const char *label) {
+  template <typename... Args>
+  void setFormattedLabel(const char *format, Args... args) {
+    snprintf(value, MAX_LEN, format, args...);
+    value[MAX_LEN] = '\0';
+  }
+
+  void setParams(int width, int height, HAlign align,
+                 const char *label = nullptr) {
     w = width;
     h = height;
     a = align;
-    strncpy(value, label, MAX_LEN);
-    value[MAX_LEN] = '\0';
+    if (label != nullptr) {
+      strncpy(value, label, MAX_LEN);
+      value[MAX_LEN] = '\0';
+    } else
+      value[0] = '\0';
   }
 
   int getW() override { return w; }
@@ -470,6 +409,8 @@ public:
 
   void draw() override {
     const int str_len = strlen(value);
+    if (str_len == 0)
+      return;
     const int w_font_limit = w / (str_len * CHAR_W);
     const int h_font_limit = h / CHAR_H;
     const int font_size = std::min(w_font_limit, h_font_limit);

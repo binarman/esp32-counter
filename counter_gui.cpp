@@ -18,7 +18,9 @@ ThreeStateButtonWidget plus_minus_5;
 ThreeStateButtonWidget commit_reject;
 TwoStateButtonWidget menu;
 
-CounterWidget counter;
+LabelWidget<> counter;
+LabelWidget<> delta;
+LabelWidget<> new_counter;
 OverwritingListWidget<8> short_history;
 
 ListWithSelectorWidget<5> menu_items;
@@ -40,6 +42,8 @@ AcceptScreen confirm_new_count_screen;
 
 // counter state
 int items_counter = 1;
+int counter_value = 0;
+int delta_value = 0;
 Screen *screen[MAX_SCREEN_DEPTH];
 int active_screen;
 
@@ -54,16 +58,36 @@ void gotoScreen(Screen *s) {
 
 void popScreen() { active_screen--; }
 
+void addToDelta(int value) {
+  delta_value += value;
+  if (delta_value >= 0)
+    delta.setFormattedLabel("+%d", delta_value);
+  else
+    delta.setFormattedLabel("%d", delta_value);
+  new_counter.setFormattedLabel("=%d", counter_value + delta_value);
+}
+
+void setCounterAndDelta(int c, int d) {
+  counter_value = c;
+  delta_value = d;
+  counter.setFormattedLabel("%d", c);
+  if (d >= 0)
+    delta.setFormattedLabel("+%d", delta_value);
+  else
+    delta.setFormattedLabel("%d", delta_value);
+  new_counter.setFormattedLabel("=%d", counter_value + delta_value);
+}
+
 void adjust1Release(int event) {
   if (event == 1 || event == 2) {
-    counter.changeDelta(event == 1 ? 1 : -1);
+    addToDelta(event == 1 ? 1 : -1);
     gotoScreen(&delta_screen);
   }
 }
 
 void adjust5Release(int event) {
   if (event == 1 || event == 2) {
-    counter.changeDelta(event == 1 ? 5 : -5);
+    addToDelta(event == 1 ? 5 : -5);
     gotoScreen(&delta_screen);
   }
 }
@@ -73,26 +97,24 @@ void commitRejectRelease(int event) {
     popScreen();
   if (event == 1) {
     // update short history
-    int delta = counter.getDelta();
     char history_item[MAX_HIST_STR_LEN + 1];
-    char sign = delta >= 0 ? '+' : '-';
+    char sign = delta_value >= 0 ? '+' : '-';
     snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", items_counter, sign,
-             std::abs(delta));
+             std::abs(delta_value));
     short_history.addItem(history_item);
     short_history.moveDown();
 
     // update full history
-    int value = counter.getValue();
-    int new_value = value + delta;
+    int new_counter_value = counter_value + delta_value;
     snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d", items_counter,
-             new_value, value, sign, std::abs(delta));
+             new_counter_value, counter_value, sign, std::abs(delta_value));
     history_items.addItem(history_item);
 
     items_counter++;
-    counter.commitDelta();
+    setCounterAndDelta(new_counter_value, 0);
   }
   if (event == 2)
-    counter.rejectDelta();
+    setCounterAndDelta(counter_value, 0);
 }
 
 void menuRelease(int event) {
@@ -144,11 +166,17 @@ void historyDownRelease(int event) {
     history_items.moveDown();
 }
 
+void startNewCounting() {
+  counter_value = 0;
+  delta_value = 0;
+  short_history.reset();
+  counter.setFormattedLabel("%d", counter_value);
+}
+
 void deleteHistoryRelease(int event) {
   if (event > 0) {
     history_items.reset();
-    counter.reset();
-    short_history.reset();
+    startNewCounting();
     popScreen();
   }
 }
@@ -156,8 +184,7 @@ void deleteHistoryRelease(int event) {
 void newCountRelease(int event) {
   if (event > 0) {
     history_items.addItem("------");
-    counter.reset();
-    short_history.reset();
+    startNewCounting();
     popScreen();
   }
 }
@@ -171,6 +198,9 @@ void setup(HAL *hal) {
   items_counter = 1;
   screen[0] = &main_screen;
   const int lower_panel_height = 11;
+  const int lower_panel_y = SCREEN_HEIGHT - lower_panel_height;
+  const int counter_width = 72;
+
   // initialize battery widget
   battery.setParams();
   battery.setPos(hal, SCREEN_WIDTH - battery.getW(), 0);
@@ -181,7 +211,6 @@ void setup(HAL *hal) {
   menu.setParams("menu", RIGHT_BUTTON_ID, menuRelease);
   commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
 
-  int lower_panel_y = SCREEN_HEIGHT - lower_panel_height;
   plus_minus_1.setPos(hal, 0, lower_panel_y);
   plus_minus_5.setPos(hal, (SCREEN_WIDTH - plus_minus_5.getW()) / 2,
                       lower_panel_y);
@@ -190,9 +219,15 @@ void setup(HAL *hal) {
 
   // initialize main screen widgets
   counter.setPos(hal, 0, 0);
-  short_history.setPos(hal, 72, 0);
-  counter.setParams(72, lower_panel_y); // todo fix dimensions of counter
+  short_history.setPos(hal, counter_width, 0);
+  delta.setPos(hal, counter_width, 0);
+  new_counter.setPos(hal, counter_width, CHAR_H);
+
+  counter.setParams(72, lower_panel_y, HAlign::LEFT);
   short_history.setParams(SCREEN_WIDTH - counter.getW(), lower_panel_y);
+  delta.setParams(SCREEN_WIDTH - counter_width, CHAR_H, HAlign::LEFT);
+  new_counter.setParams(SCREEN_WIDTH - counter_width, CHAR_H, HAlign::LEFT);
+  setCounterAndDelta(0, 0);
 
   // initialize menu widgets
   menu_items.setParams(SCREEN_WIDTH, SCREEN_HEIGHT - lower_panel_height, 0);
@@ -244,6 +279,8 @@ void setup(HAL *hal) {
   delta_screen.addWidget(&plus_minus_5);
   delta_screen.addWidget(&commit_reject);
   delta_screen.addWidget(&counter);
+  delta_screen.addWidget(&delta);
+  delta_screen.addWidget(&new_counter);
   delta_screen.addWidget(&battery);
 
   menu_screen.addWidget(&menu_items);

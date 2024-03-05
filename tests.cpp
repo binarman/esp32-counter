@@ -54,8 +54,8 @@ void expectMainScreen(Display &d, int counter) {
   EXPECT_CALL(d, setCursor(104, 53));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("menu"))));
   EXPECT_CALL(d, setCursor(0, 0));
-  EXPECT_CALL(d, setTextSize(5));
-  EXPECT_CALL(d, print(Matcher<int>(counter)));
+  EXPECT_CALL(d, setTextSize(6));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(std::to_string(counter)))));
 }
 
 void expectMainScreenHistory(Display &d,
@@ -67,21 +67,16 @@ void expectMainScreenHistory(Display &d,
 }
 
 void expectDeltaScreen(Display &d, int counter, int delta) {
-  EXPECT_CALL(d, setTextColor(1)).Times(4);
+  EXPECT_CALL(d, setTextColor(1)).Times(6);
   EXPECT_CALL(d, setCursor(0, 53));
-  EXPECT_CALL(d, setTextSize(1)).Times(4);
+  EXPECT_CALL(d, setTextSize(1)).Times(5);
 
-  EXPECT_CALL(d, setCursor(90, 0));
-  if (delta >= 0)
-    EXPECT_CALL(d, print(Matcher<const char *>(StrEq("+"))));
-  EXPECT_CALL(d, setCursor(90, 8));
-  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("="))));
-  if (counter == 0) {
-    EXPECT_CALL(d, print(Matcher<int>(delta))).Times(2);
-  } else {
-    EXPECT_CALL(d, print(Matcher<int>(delta)));
-    EXPECT_CALL(d, print(Matcher<int>(counter + delta)));
-  }
+  EXPECT_CALL(d, setCursor(72, 0));
+  std::string delta_str = (delta >= 0 ? "+" : "") + std::to_string(delta);
+  std::string sum_str = "=" + std::to_string(counter + delta);
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(delta_str))));
+  EXPECT_CALL(d, setCursor(72, 8));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(sum_str))));
 
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("+1/-1"))));
   EXPECT_CALL(d, setCursor(49, 53));
@@ -89,8 +84,8 @@ void expectDeltaScreen(Display &d, int counter, int delta) {
   EXPECT_CALL(d, setCursor(86, 53));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("ok/drop"))));
   EXPECT_CALL(d, setCursor(0, 0));
-  EXPECT_CALL(d, setTextSize(5));
-  EXPECT_CALL(d, print(Matcher<int>(counter)));
+  EXPECT_CALL(d, setTextSize(6));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(std::to_string(counter)))));
 }
 
 void expectMenuScreen(Display &d) {
