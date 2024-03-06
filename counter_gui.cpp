@@ -79,22 +79,17 @@ void setCounterAndDelta(int c, int d) {
 }
 
 void adjust1Release(int event) {
-  if (event == 1 || event == 2) {
-    addToDelta(event == 1 ? 1 : -1);
-    gotoScreen(&delta_screen);
-  }
+  addToDelta(event == 1 ? 1 : -1);
+  gotoScreen(&delta_screen);
 }
 
 void adjust5Release(int event) {
-  if (event == 1 || event == 2) {
-    addToDelta(event == 1 ? 5 : -5);
-    gotoScreen(&delta_screen);
-  }
+  addToDelta(event == 1 ? 5 : -5);
+  gotoScreen(&delta_screen);
 }
 
 void commitRejectRelease(int event) {
-  if (event > 0)
-    popScreen();
+  popScreen();
   if (event == 1) {
     // update short history
     char history_item[MAX_HIST_STR_LEN + 1];
@@ -118,18 +113,15 @@ void commitRejectRelease(int event) {
 }
 
 void menuRelease(int event) {
-  if (event > 0)
-    gotoScreen(&menu_screen);
+  gotoScreen(&menu_screen);
 }
 
 void menuUpRelease(int event) {
-  if (event > 0)
-    menu_items.moveSelUp();
+  menu_items.moveSelUp();
 }
 
 void menuDownRelease(int event) {
-  if (event > 0)
-    menu_items.moveSelDown();
+  menu_items.moveSelDown();
 }
 
 void selectReturnRelease(int event) {
@@ -152,18 +144,15 @@ void selectReturnRelease(int event) {
 }
 
 void returnRelease(int event) {
-  if (event > 0)
-    popScreen();
+  popScreen();
 }
 
 void historyUpRelease(int event) {
-  if (event > 0)
-    history_items.moveUp();
+  history_items.moveUp();
 }
 
 void historyDownRelease(int event) {
-  if (event > 0)
-    history_items.moveDown();
+  history_items.moveDown();
 }
 
 void startNewCounting() {
@@ -174,19 +163,15 @@ void startNewCounting() {
 }
 
 void deleteHistoryRelease(int event) {
-  if (event > 0) {
-    history_items.reset();
-    startNewCounting();
-    popScreen();
-  }
+  history_items.reset();
+  startNewCounting();
+  popScreen();
 }
 
 void newCountRelease(int event) {
-  if (event > 0) {
-    history_items.addItem("------");
-    startNewCounting();
-    popScreen();
-  }
+  history_items.addItem("------");
+  startNewCounting();
+  popScreen();
 }
 
 } // namespace

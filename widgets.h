@@ -133,7 +133,8 @@ public:
     bool button_state = hal->buttonPressed(button_id);
     auto timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, button_state);
-    on_release(event);
+    if (event > 0)
+      on_release(event);
   }
 
   void draw() override {
@@ -198,7 +199,8 @@ public:
     bool button_state = hal->buttonPressed(button_id);
     int timestamp = hal->uptimeMillis();
     int event = state.updateState(timestamp, button_state);
-    on_release(event);
+    if (event > 0)
+      on_release(event);
   }
 
   void draw() override {
