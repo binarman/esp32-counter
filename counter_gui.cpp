@@ -19,7 +19,8 @@ AcceptScreen confirm_remove_history_screen;
 AcceptScreen confirm_new_count_screen;
 
 // global state and screen state
-int items_counter = 1;
+int global_history_counter = 0;
+int short_history_counter = 0;
 Screen *screen[MAX_SCREEN_DEPTH];
 int active_screen;
 
@@ -34,21 +35,23 @@ void onCommitRejectDelta(int event) {
   popScreen();
   if (event == 1) {
     // update short history
+    short_history_counter++;
     char history_item[MAX_HIST_STR_LEN + 1];
     const int delta_value = delta_screen.getDelta();
     char sign = delta_value >= 0 ? '+' : '-';
-    snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", items_counter, sign,
-             std::abs(delta_value));
+    snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", short_history_counter,
+             sign, std::abs(delta_value));
     main_screen.addHistoryItem(history_item);
 
     // update full history
+    global_history_counter++;
     const int counter_value = main_screen.getCounter();
     int new_counter_value = counter_value + delta_value;
-    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d", items_counter,
-             new_counter_value, counter_value, sign, std::abs(delta_value));
+    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d",
+             global_history_counter, new_counter_value, counter_value, sign,
+             std::abs(delta_value));
     history_screen.addHistoryItem(history_item);
 
-    items_counter++;
     main_screen.setCounter(new_counter_value);
   }
 }
@@ -93,6 +96,7 @@ void onItemSelect(int event) {
 void onReturn(int event) { popScreen(); }
 
 void startNewCounting() {
+  short_history_counter = 0;
   main_screen.setCounter(0);
   main_screen.reset_history();
 }
@@ -100,6 +104,7 @@ void startNewCounting() {
 // Handler for confirm button confirm_remove_history screen
 void onDeleteHistoryConfirmation(int event) {
   history_screen.clearHistory();
+  global_history_counter = 0;
   startNewCounting();
   popScreen();
 }
@@ -115,7 +120,8 @@ void onNewCountConfirmation(int event) {
 
 void setup(HAL *hal) {
   active_screen = 0;
-  items_counter = 1;
+  short_history_counter = 0;
+  global_history_counter = 0;
   screen[0] = &main_screen;
 
   // initialize battery widget

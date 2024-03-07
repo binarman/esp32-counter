@@ -500,7 +500,15 @@ TEST(basic_tests, delete_history) {
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
 
-  // TODO add new record and see if it has correct numeration
+  // add an item to the history
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+
+  expectMainScreen(d, 1);
+  expectMainScreenHistory(d, {"1.+1"});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  counter_gui::loop();
 }
 
 TEST(basic_tests, new_count) {
