@@ -14,6 +14,14 @@ using ::testing::TypedEq;
 #define CHAR_W 6
 #define CHAR_H 8
 
+void expectSetup(HAL &h) {
+  auto &d = *h.display();
+  ON_CALL(d, width()).WillByDefault(Return(128));
+  ON_CALL(d, height()).WillByDefault(Return(64));
+  EXPECT_CALL(d, width()).Times(6);
+  EXPECT_CALL(d, height()).Times(6);
+}
+
 void expectUpdateButtons(HAL &h, int timestamp, bool btn1, bool btn2,
                          bool btn3) {
   EXPECT_CALL(h, uptimeMillis()).WillRepeatedly(Return(timestamp));
@@ -218,24 +226,28 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
 TEST(basic_tests, main_screen) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
   expectUpdateButtons(h, 123, false, false, false);
   expectMainScreen(d, 0);
-  counter_gui::setup(&h);
   counter_gui::loop();
 }
 
 TEST(basic_tests, add_counter_plus1) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   constexpr int start_time = 321;
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
   // start pressing the +1/-1 button
   expectUpdateButtons(h, start_time, true, false, false);
   expectMainScreen(d, 0);
-  counter_gui::setup(&h);
   counter_gui::loop();
 
   expectUpdateButtons(h, start_time + 49, true, false, false);
@@ -275,10 +287,12 @@ TEST(basic_tests, add_counter_plus1) {
 TEST(basic_tests, add_counter_plus1_minus5) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
 
-  counter_gui::setup(&h);
   int timestamp = 321;
   // pressing the +1/-1 button
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
@@ -321,6 +335,9 @@ TEST(basic_tests, add_counter_plus1_minus5) {
 TEST(basic_tests, go_to_menu) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
 
@@ -328,7 +345,6 @@ TEST(basic_tests, go_to_menu) {
   // start pressing the menu button
   expectUpdateButtons(h, start_time, false, false, true);
   expectMainScreen(d, 0);
-  counter_gui::setup(&h);
   counter_gui::loop();
 
   expectUpdateButtons(h, start_time + 49, false, false, true);
@@ -373,12 +389,14 @@ TEST(basic_tests, go_to_menu) {
 TEST(basic_tests, full_history) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
 
   int timestamp = 321;
   // start pressing the menu button
-  counter_gui::setup(&h);
 
   // add +1; +2; +3...
   int num_records = 10;
@@ -431,12 +449,14 @@ TEST(basic_tests, full_history) {
 TEST(basic_tests, delete_history) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
 
   int timestamp = 321;
   // start pressing the menu button
-  counter_gui::setup(&h);
 
   // add +1; +2; +3...
   int num_records = 10;
@@ -479,17 +499,21 @@ TEST(basic_tests, delete_history) {
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
   counter_gui::loop();
+
+  // TODO add new record and see if it has correct numeration
 }
 
 TEST(basic_tests, new_count) {
   Display d;
   HAL h(&d);
+  expectSetup(h);
+  counter_gui::setup(&h);
+
   expectBatteryDraw(d);
   expectBatteryState(h, 0.5);
 
   int timestamp = 321;
   // start pressing the menu button
-  counter_gui::setup(&h);
 
   // add +1; +2; +3...
   int num_records = 3;

@@ -31,6 +31,8 @@ public:
   MOCK_METHOD(void, fillRect,
               (uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
                uint16_t color));
+  MOCK_METHOD(uint16_t, width, ());
+  MOCK_METHOD(uint16_t, height, ());
 };
 
 class HAL {

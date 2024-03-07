@@ -1,287 +1,143 @@
 #include "counter_gui.h"
+#include "screens.h"
 #include "widgets.h"
 #include <cstdio>
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-
-#define LEFT_BUTTON_ID 0
-#define MIDDLE_BUTTON_ID 1
-#define RIGHT_BUTTON_ID 2
 #define MAX_SCREEN_DEPTH 5
 
+namespace counter_gui {
+
 namespace {
+
 BatteryWidget battery;
 
-ThreeStateButtonWidget plus_minus_1;
-ThreeStateButtonWidget plus_minus_5;
-ThreeStateButtonWidget commit_reject;
-TwoStateButtonWidget menu;
-
-LabelWidget<> counter;
-LabelWidget<> delta;
-LabelWidget<> new_counter;
-OverwritingListWidget<8> short_history;
-
-ListWithSelectorWidget<5> menu_items;
-TwoStateButtonWidget menu_up;
-TwoStateButtonWidget menu_down;
-ThreeStateButtonWidget select_return;
-
-TwoStateButtonWidget history_up;
-TwoStateButtonWidget history_down;
-TwoStateButtonWidget history_return;
-OverwritingListWidget<128> history_items;
-
-Screen main_screen;
-Screen delta_screen;
-Screen menu_screen;
-Screen history_screen;
+MainScreen main_screen;
+DeltaScreen delta_screen;
+MenuScreen menu_screen;
+HistoryScreen history_screen;
 AcceptScreen confirm_remove_history_screen;
 AcceptScreen confirm_new_count_screen;
 
-// counter state
+// global state and screen state
 int items_counter = 1;
-int counter_value = 0;
-int delta_value = 0;
 Screen *screen[MAX_SCREEN_DEPTH];
 int active_screen;
 
 void pushScreen(Screen *s) { screen[++active_screen] = s; }
-
 Screen *getActiveScreen() { return screen[active_screen]; }
-
-void gotoScreen(Screen *s) {
-  if (getActiveScreen() != s)
-    pushScreen(s);
-}
-
 void popScreen() { active_screen--; }
 
-void addToDelta(int value) {
-  delta_value += value;
-  if (delta_value >= 0)
-    delta.setFormattedLabel("+%d", delta_value);
-  else
-    delta.setFormattedLabel("%d", delta_value);
-  new_counter.setFormattedLabel("=%d", counter_value + delta_value);
-}
+// callbacks moving between screens
 
-void setCounterAndDelta(int c, int d) {
-  counter_value = c;
-  delta_value = d;
-  counter.setFormattedLabel("%d", c);
-  if (d >= 0)
-    delta.setFormattedLabel("+%d", delta_value);
-  else
-    delta.setFormattedLabel("%d", delta_value);
-  new_counter.setFormattedLabel("=%d", counter_value + delta_value);
-}
-
-void adjust1Release(int event) {
-  addToDelta(event == 1 ? 1 : -1);
-  gotoScreen(&delta_screen);
-}
-
-void adjust5Release(int event) {
-  addToDelta(event == 1 ? 5 : -5);
-  gotoScreen(&delta_screen);
-}
-
-void commitRejectRelease(int event) {
+// Handler for ok/drop button on delta screen
+void onCommitRejectDelta(int event) {
   popScreen();
   if (event == 1) {
     // update short history
     char history_item[MAX_HIST_STR_LEN + 1];
+    const int delta_value = delta_screen.getDelta();
     char sign = delta_value >= 0 ? '+' : '-';
     snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", items_counter, sign,
              std::abs(delta_value));
-    short_history.addItem(history_item);
-    short_history.moveDown();
+    main_screen.addHistoryItem(history_item);
 
     // update full history
+    const int counter_value = main_screen.getCounter();
     int new_counter_value = counter_value + delta_value;
     snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d", items_counter,
              new_counter_value, counter_value, sign, std::abs(delta_value));
-    history_items.addItem(history_item);
+    history_screen.addHistoryItem(history_item);
 
     items_counter++;
-    setCounterAndDelta(new_counter_value, 0);
+    main_screen.setCounter(new_counter_value);
   }
-  if (event == 2)
-    setCounterAndDelta(counter_value, 0);
 }
 
-void menuRelease(int event) {
-  gotoScreen(&menu_screen);
+// Handler for +1/-1 button on main screen
+void onSmallAdjustMainScreen(int event) {
+  int diff = (event == 1 ? 1 : -1);
+  pushScreen(&delta_screen);
+  delta_screen.setCounterAndDelta(main_screen.getCounter(), diff);
 }
 
-void menuUpRelease(int event) {
-  menu_items.moveSelUp();
+// Handler for +5/-5 button on main screen
+void onLargeAdjustMainScreen(int event) {
+  int diff = (event == 1 ? 5 : -5);
+  pushScreen(&delta_screen);
+  delta_screen.setCounterAndDelta(main_screen.getCounter(), diff);
 }
 
-void menuDownRelease(int event) {
-  menu_items.moveSelDown();
-}
+// Handler for menu button on main screen
+void onMenuPress(int event) { pushScreen(&menu_screen); }
 
-void selectReturnRelease(int event) {
+// Handler for item select on menu screen
+void onItemSelect(int event) {
   if (event == 1) {
-    switch (menu_items.getSelPos()) {
+    switch (menu_screen.getSelPos()) {
     case 0:
-      gotoScreen(&history_screen);
+      pushScreen(&history_screen);
       break;
     case 1:
-      gotoScreen(&confirm_new_count_screen);
+      pushScreen(&confirm_new_count_screen);
       break;
     case 2:
-      gotoScreen(&confirm_remove_history_screen);
+      pushScreen(&confirm_remove_history_screen);
       break;
     }
   }
-  if (event == 2) {
+  if (event == 2)
     popScreen();
-  }
 }
 
-void returnRelease(int event) {
-  popScreen();
-}
-
-void historyUpRelease(int event) {
-  history_items.moveUp();
-}
-
-void historyDownRelease(int event) {
-  history_items.moveDown();
-}
+// Handler for back button on history screen and confirmation screens
+void onReturn(int event) { popScreen(); }
 
 void startNewCounting() {
-  counter_value = 0;
-  delta_value = 0;
-  short_history.reset();
-  counter.setFormattedLabel("%d", counter_value);
+  main_screen.setCounter(0);
+  main_screen.reset_history();
 }
 
-void deleteHistoryRelease(int event) {
-  history_items.reset();
+// Handler for confirm button confirm_remove_history screen
+void onDeleteHistoryConfirmation(int event) {
+  history_screen.clearHistory();
   startNewCounting();
   popScreen();
 }
 
-void newCountRelease(int event) {
-  history_items.addItem("------");
+// Handler for confirm button confirm_new_count screen
+void onNewCountConfirmation(int event) {
+  history_screen.addHistoryItem("------");
   startNewCounting();
   popScreen();
 }
 
 } // namespace
 
-namespace counter_gui {
-
 void setup(HAL *hal) {
   active_screen = 0;
   items_counter = 1;
   screen[0] = &main_screen;
-  const int lower_panel_height = 11;
-  const int lower_panel_y = SCREEN_HEIGHT - lower_panel_height;
-  const int counter_width = 72;
 
   // initialize battery widget
   battery.setParams();
-  battery.setPos(hal, SCREEN_WIDTH - battery.getW(), 0);
-
-  // initialize main screen and delta widgets
-  plus_minus_1.setParams("+1", "-1", LEFT_BUTTON_ID, adjust1Release);
-  plus_minus_5.setParams("+5", "-5", MIDDLE_BUTTON_ID, adjust5Release);
-  menu.setParams("menu", RIGHT_BUTTON_ID, menuRelease);
-  commit_reject.setParams("ok", "drop", RIGHT_BUTTON_ID, commitRejectRelease);
-
-  plus_minus_1.setPos(hal, 0, lower_panel_y);
-  plus_minus_5.setPos(hal, (SCREEN_WIDTH - plus_minus_5.getW()) / 2,
-                      lower_panel_y);
-  menu.setPos(hal, SCREEN_WIDTH - menu.getW(), lower_panel_y);
-  commit_reject.setPos(hal, SCREEN_WIDTH - commit_reject.getW(), lower_panel_y);
-
-  // initialize main screen widgets
-  counter.setPos(hal, 0, 0);
-  short_history.setPos(hal, counter_width, 0);
-  delta.setPos(hal, counter_width, 0);
-  new_counter.setPos(hal, counter_width, CHAR_H);
-
-  counter.setParams(72, lower_panel_y, HAlign::LEFT);
-  short_history.setParams(SCREEN_WIDTH - counter.getW(), lower_panel_y);
-  delta.setParams(SCREEN_WIDTH - counter_width, CHAR_H, HAlign::LEFT);
-  new_counter.setParams(SCREEN_WIDTH - counter_width, CHAR_H, HAlign::LEFT);
-  setCounterAndDelta(0, 0);
-
-  // initialize menu widgets
-  menu_items.setParams(SCREEN_WIDTH, SCREEN_HEIGHT - lower_panel_height, 0);
-  menu_items.addItem("show full history");
-  menu_items.addItem("start new counting");
-  menu_items.addItem("drop full history");
-  menu_up.setParams("\x1e", LEFT_BUTTON_ID, menuUpRelease);
-  menu_down.setParams("\x1f", MIDDLE_BUTTON_ID, menuDownRelease);
-  select_return.setParams("sel", "back", RIGHT_BUTTON_ID, selectReturnRelease);
-
-  menu_items.setPos(hal, 0, 0);
-  menu_up.setPos(hal, 0, lower_panel_y);
-  menu_down.setPos(hal, (SCREEN_WIDTH - menu_down.getW()) / 2, lower_panel_y);
-  select_return.setPos(hal, SCREEN_WIDTH - select_return.getW(), lower_panel_y);
-
-  // initialize history widgets
-  history_items.setParams(SCREEN_WIDTH, SCREEN_HEIGHT - lower_panel_height);
-  history_up.setParams("\x1e", LEFT_BUTTON_ID, historyUpRelease);
-  history_down.setParams("\x1f", MIDDLE_BUTTON_ID, historyDownRelease);
-  history_return.setParams("back", RIGHT_BUTTON_ID, returnRelease);
-
-  history_items.setPos(hal, 0, 0);
-  history_up.setPos(hal, 0, lower_panel_y);
-  history_down.setPos(hal, (SCREEN_WIDTH - history_down.getW()) / 2,
-                      lower_panel_y);
-  history_return.setPos(hal, SCREEN_WIDTH - history_return.getW(),
-                        lower_panel_y);
+  battery.setPos(hal, 128 - battery.getW(), 0);
 
   // initialize screens
-  main_screen.setup();
-  delta_screen.setup();
-  menu_screen.setup();
-  history_screen.setup();
-  confirm_remove_history_screen.setup(hal, SCREEN_WIDTH, SCREEN_HEIGHT,
-                                      "delete history", deleteHistoryRelease,
-                                      returnRelease);
-  confirm_new_count_screen.setup(hal, SCREEN_WIDTH, SCREEN_HEIGHT,
-                                 "start new count", newCountRelease,
-                                 returnRelease);
+  main_screen.setup(hal, onSmallAdjustMainScreen, onLargeAdjustMainScreen,
+                    onMenuPress);
+  delta_screen.setup(hal, onCommitRejectDelta);
+  menu_screen.setup(hal, onItemSelect);
+  history_screen.setup(hal, onReturn);
+  confirm_remove_history_screen.setup(hal, "delete history",
+                                      onDeleteHistoryConfirmation, onReturn);
+  confirm_new_count_screen.setup(hal, "start new count", onNewCountConfirmation,
+                                 onReturn);
 
-  main_screen.addWidget(&plus_minus_1);
-  main_screen.addWidget(&plus_minus_5);
-  main_screen.addWidget(&menu);
-  main_screen.addWidget(&counter);
-  main_screen.addWidget(&short_history);
   main_screen.addWidget(&battery);
-
-  delta_screen.addWidget(&plus_minus_1);
-  delta_screen.addWidget(&plus_minus_5);
-  delta_screen.addWidget(&commit_reject);
-  delta_screen.addWidget(&counter);
-  delta_screen.addWidget(&delta);
-  delta_screen.addWidget(&new_counter);
   delta_screen.addWidget(&battery);
-
-  menu_screen.addWidget(&menu_items);
-  menu_screen.addWidget(&menu_up);
-  menu_screen.addWidget(&menu_down);
-  menu_screen.addWidget(&select_return);
   menu_screen.addWidget(&battery);
-
-  history_screen.addWidget(&history_items);
-  history_screen.addWidget(&history_up);
-  history_screen.addWidget(&history_down);
-  history_screen.addWidget(&history_return);
   history_screen.addWidget(&battery);
-
   confirm_remove_history_screen.addWidget(&battery);
-
   confirm_new_count_screen.addWidget(&battery);
 }
 
