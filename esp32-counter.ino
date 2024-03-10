@@ -34,5 +34,10 @@ void loop() {
     display.clearDisplay();
     counter_gui::draw();
     display.display();
+  } else {
+    constexpr int timeout_us = 20000;
+    esp_err_t timer_set = esp_sleep_enable_timer_wakeup(timeout_us);
+    if (timer_set == ESP_OK)
+      esp_light_sleep_start();
   }
 }
