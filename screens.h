@@ -37,9 +37,11 @@ public:
 
   void addWidget(Widget *widget) { w[size++] = widget; }
 
-  void update() {
+  bool update() {
+    bool updated = false;
     for (int i = 0; i < size; ++i)
-      w[i]->update();
+      updated |= w[i]->update();
+    return updated;
   }
 
   void draw() {

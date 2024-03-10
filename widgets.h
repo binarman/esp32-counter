@@ -98,7 +98,7 @@ public:
   virtual int getW() = 0;
   virtual int getH() = 0;
   virtual void reset() = 0;
-  virtual void update() = 0;
+  virtual bool update() = 0;
   virtual void draw() = 0;
 };
 
@@ -129,12 +129,15 @@ public:
 
   void reset() override { state.reset(); }
 
-  void update() override {
+  bool update() override {
     bool button_state = hal->buttonPressed(button_id);
     auto timestamp = hal->uptimeMillis();
+    auto old_progress = state.getProgress();
     int event = state.updateState(timestamp, button_state);
+    bool state_changed = (state.getProgress() != old_progress || button_state || event > 0);
     if (event > 0)
       on_release(event);
+    return state_changed;
   }
 
   void draw() override {
@@ -195,12 +198,15 @@ public:
 
   void reset() override { state.reset(); }
 
-  void update() override {
+  bool update() override {
     bool button_state = hal->buttonPressed(button_id);
     int timestamp = hal->uptimeMillis();
+    auto old_progress = state.getProgress();
     int event = state.updateState(timestamp, button_state);
+    bool state_changed = (state.getProgress() != old_progress || button_state || event > 0);
     if (event > 0)
       on_release(event);
+    return state_changed;
   }
 
   void draw() override {
@@ -221,6 +227,7 @@ protected:
   int w = -1;
   int h = -1;
   int first_visible_item = 0;
+  bool updated = true;
 
   Derived &d() { return *static_cast<Derived *>(this); }
 
@@ -229,24 +236,29 @@ public:
     w = width;
     h = height;
     first_visible_item = 0;
+    updated = true;
   }
 
   void moveDown() {
     int visible_items = h / CHAR_H;
-    if (first_visible_item < d().getSize() - visible_items)
+    if (first_visible_item < d().getSize() - visible_items) {
       first_visible_item++;
+      updated = true;
+    }
   }
 
   void moveUp() {
-    if (first_visible_item > 0)
+    if (first_visible_item > 0) {
       first_visible_item--;
+      updated = true;
+    }
   }
 
   int getW() override { return w; }
 
   int getH() override { return h; }
 
-  void reset() override { first_visible_item = 0; }
+  void reset() override { first_visible_item = 0; updated = true;}
 
   void draw() override {
     display->setTextColor(SH110X_WHITE);
@@ -261,6 +273,14 @@ public:
       print_buffer[max_item_width] = '\0';
       display->print(print_buffer);
     }
+  }
+
+  bool update() override {
+    if (updated) {
+      updated = false;
+      return true;
+    }
+    return false;
   }
 };
 
@@ -287,11 +307,12 @@ public:
     if (size < MAX_ITEMS)
       size++;
     insert_point = (insert_point + 1) % MAX_ITEMS;
+    Base::updated = true;
   }
 
-  int getSize() { return size; }
+  int getSize() const { return size; }
 
-  void getItem(int i, char *buffer, int max_str_len) {
+  void getItem(int i, char *buffer, int max_str_len) const {
     int first_item_pos = (insert_point - size + MAX_ITEMS) % MAX_ITEMS;
     int item_pos = (first_item_pos + i) % MAX_ITEMS;
     strncpy(buffer, items[item_pos], max_str_len);
@@ -303,8 +324,6 @@ public:
     size = 0;
     insert_point = 0;
   }
-
-  void update() override {}
 };
 
 template <int MAX_ITEMS, int MAX_LEN = MAX_HIST_STR_LEN>
@@ -329,6 +348,7 @@ public:
     items[size][MAX_LEN] = '\0';
     assert(size < MAX_ITEMS);
     size++;
+    Base::updated = true;
   }
 
   int getSize() { return size; }
@@ -350,8 +370,6 @@ public:
     sel_pos = 0;
   }
 
-  void update() override {}
-
   void adjustVisibleAreaToSel() {
     if (sel_pos < Base::first_visible_item)
       Base::first_visible_item = sel_pos;
@@ -361,16 +379,18 @@ public:
       Base::first_visible_item += sel_pos - last_visible_item;
   }
 
-  int getSelPos() { return sel_pos; }
+  int getSelPos() const { return sel_pos; }
 
   void moveSelUp() {
     sel_pos = std::max(sel_pos - 1, 0);
     adjustVisibleAreaToSel();
+    Base::updated = true;
   }
 
   void moveSelDown() {
     sel_pos = std::min(sel_pos + 1, size - 1);
     adjustVisibleAreaToSel();
+    Base::updated = true;
   }
 };
 
@@ -381,12 +401,14 @@ template <int MAX_LEN = MAX_HIST_STR_LEN> class LabelWidget : public Widget {
   int h = -1;
   char value[MAX_LEN + 1];
   HAlign a;
+  bool updated = true;
 
 public:
   template <typename... Args>
   void setFormattedLabel(const char *format, Args... args) {
     snprintf(value, MAX_LEN, format, args...);
     value[MAX_LEN] = '\0';
+    updated = true;
   }
 
   void setParams(int width, int height, HAlign align,
@@ -399,15 +421,22 @@ public:
       value[MAX_LEN] = '\0';
     } else
       value[0] = '\0';
+    updated = true;
   }
 
   int getW() override { return w; }
 
   int getH() override { return h; }
 
-  void reset() override {}
+  void reset() override {updated = true;}
 
-  void update() override {}
+  bool update() override {
+    if (updated) {
+      updated = false;
+      return true;
+    }
+    return false;
+  }
 
   void draw() override {
     const int str_len = strlen(value);
@@ -439,23 +468,39 @@ public:
 };
 
 class BatteryWidget : public Widget {
-  float state = 0.0f;
+  int state = -1;
 
 public:
   void setParams() { reset(); }
 
   int getW() override { return 16; }
   int getH() override { return 7; }
-  void reset() override { state = 0; }
-  void update() override { state = hal->getPowerState(); }
+  void reset() override { state = -1; }
+
+  bool update() override {
+    float raw_state = hal->getPowerState();
+    int new_state = 0;
+    if (raw_state > 0.25)
+      new_state++;
+    if (raw_state > 0.5)
+      new_state++;
+    if (raw_state > 0.75)
+      new_state++;
+    if (new_state != state) {
+      state = new_state;
+      return true;
+    }
+    return false;
+  }
+
   void draw() override {
     display->drawRect(off_x + 1, off_y, 15, 7, SH110X_WHITE);
     display->drawFastVLine(off_x, off_y + 1, 5, SH110X_WHITE);
-    if (state > 0.75)
+    if (state > 2)
       display->fillRect(off_x + 3, off_y + 2, 3, 3, SH110X_WHITE);
-    if (state > 0.5)
+    if (state > 1)
       display->fillRect(off_x + 7, off_y + 2, 3, 3, SH110X_WHITE);
-    if (state > 0.25)
+    if (state > 0)
       display->fillRect(off_x + 11, off_y + 2, 3, 3, SH110X_WHITE);
   }
 };

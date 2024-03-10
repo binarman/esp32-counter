@@ -1,4 +1,5 @@
 #include "counter_gui.h"
+#include <esp_sleep.h>
 
 #define i2c_Address 0x3c
 
@@ -28,7 +29,10 @@ void setup() {
 }
 
 void loop() {
-  display.clearDisplay();
-  counter_gui::loop();
-  display.display();
+  bool updated = counter_gui::update();
+  if (updated) {
+    display.clearDisplay();
+    counter_gui::draw();
+    display.display();
+  }
 }

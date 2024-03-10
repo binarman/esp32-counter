@@ -7,7 +7,9 @@ namespace counter_gui {
 
 void setup(HAL *hal);
 
-void loop();
+bool update();
+
+void draw();
 
 } // namespace counter_gui
 

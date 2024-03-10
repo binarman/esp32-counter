@@ -192,6 +192,11 @@ void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2,
     EXPECT_CALL(d, drawFastHLine(86, 61, 2 * CHAR_W, SH110X_WHITE));
 }
 
+void loop(){
+  counter_gui::update();
+  counter_gui::draw();
+}
+
 void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
                                         int press_time, int &timestamp) {
   auto &d = *h.display();
@@ -207,15 +212,15 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
 
   // start pressing
   expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
-  counter_gui::loop();
+  loop();
   // register press of required time
   timestamp += press_time;
   expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
-  counter_gui::loop();
+  loop();
   // release buttons
   timestamp += 10;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   ::testing::Mock::VerifyAndClearExpectations(&d);
   ::testing::Mock::VerifyAndClearExpectations(&h);
@@ -233,7 +238,7 @@ TEST(basic_tests, main_screen) {
   expectBatteryState(h, 0.5);
   expectUpdateButtons(h, 123, false, false, false);
   expectMainScreen(d, 0);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, add_counter_plus1) {
@@ -248,40 +253,40 @@ TEST(basic_tests, add_counter_plus1) {
   // start pressing the +1/-1 button
   expectUpdateButtons(h, start_time, true, false, false);
   expectMainScreen(d, 0);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 49, true, false, false);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, 0.049, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 50, true, false, false);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, 0.05, -1, -1);
-  counter_gui::loop();
+  loop();
 
   // release +1/-1 button, press ok/drop button
   expectUpdateButtons(h, start_time + 60, false, false, true);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 60 + 1, false, false, true);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 60 + 1 + 100, false, false, true);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, -1, 0.1);
-  counter_gui::loop();
+  loop();
 
   // release ok/drop button
   expectUpdateButtons(h, start_time + 60 + 110, false, false, false);
   expectMainScreen(d, 1);
   expectMainScreenHistory(d, {"1.+1"});
   expectMainScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, add_counter_plus1_minus5) {
@@ -301,35 +306,35 @@ TEST(basic_tests, add_counter_plus1_minus5) {
   expectUpdateButtons(h, timestamp + 60, false, true, false);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, timestamp + 60 + 150, false, true, false);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, 0.15, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, timestamp + 60 + 1000, false, true, false);
   expectDeltaScreen(d, 0, 1);
   expectDeltaScreenButtonAnimation(d, -1, 1, -1);
-  counter_gui::loop();
+  loop();
 
   // release +5/-5 button, press ok/drop button
   expectUpdateButtons(h, timestamp + 60 + 1001, false, false, true);
   expectDeltaScreen(d, 0, -4);
   expectDeltaScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, timestamp + 60 + 1001 + 100, false, false, true);
   expectDeltaScreen(d, 0, -4);
   expectDeltaScreenButtonAnimation(d, -1, -1, 0.1);
-  counter_gui::loop();
+  loop();
 
   // release ok/drop button
   expectUpdateButtons(h, timestamp + 60 + 1001 + 101, false, false, false);
   expectMainScreen(d, -4);
   expectMainScreenHistory(d, {"1.-4"});
   expectMainScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, go_to_menu) {
@@ -345,45 +350,45 @@ TEST(basic_tests, go_to_menu) {
   // start pressing the menu button
   expectUpdateButtons(h, start_time, false, false, true);
   expectMainScreen(d, 0);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 49, false, false, true);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 50, false, false, true);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, -1, -1, 1);
-  counter_gui::loop();
+  loop();
 
   // release the menu button
   expectUpdateButtons(h, start_time + 60, false, false, false);
   expectMenuScreen(d);
   expectMenuScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   // press back button
   expectUpdateButtons(h, start_time + 70, false, false, true);
   expectMenuScreen(d);
   expectMenuScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 70 + 50, false, false, true);
   expectMenuScreen(d);
   expectMenuScreenButtonAnimation(d, -1, -1, 0.05);
-  counter_gui::loop();
+  loop();
 
   expectUpdateButtons(h, start_time + 70 + 50 + 1000, false, false, true);
   expectMenuScreen(d);
   expectMenuScreenButtonAnimation(d, -1, -1, 1);
-  counter_gui::loop();
+  loop();
 
   // release back button
   expectUpdateButtons(h, start_time + 70 + 50 + 1000 + 10, false, false, false);
   expectMainScreen(d, 0);
   expectMainScreenButtonAnimation(d, -1, -1, -1);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, full_history) {
@@ -417,7 +422,7 @@ TEST(basic_tests, full_history) {
                           "5. 15=10+5", "6. 21=15+6"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // scroll down one item
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
@@ -427,7 +432,7 @@ TEST(basic_tests, full_history) {
                           "6. 21=15+6", "7. 28=21+7"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // scroll up one item
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
@@ -437,13 +442,13 @@ TEST(basic_tests, full_history) {
                           "5. 15=10+5", "6. 21=15+6"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // go back to manu screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
   expectMenuScreen(d);
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, delete_history) {
@@ -489,7 +494,7 @@ TEST(basic_tests, delete_history) {
   expectHistoryScreen(d, {});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // move to the menu and main screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
@@ -498,7 +503,7 @@ TEST(basic_tests, delete_history) {
   expectMainScreen(d, 0);
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // add an item to the history
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
@@ -508,7 +513,7 @@ TEST(basic_tests, delete_history) {
   expectMainScreenHistory(d, {"1.+1"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 }
 
 TEST(basic_tests, new_count) {
@@ -552,7 +557,7 @@ TEST(basic_tests, new_count) {
   expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "------"});
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 
   // move to the menu and main screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
@@ -561,7 +566,7 @@ TEST(basic_tests, new_count) {
   expectMainScreen(d, 0);
   timestamp += 1;
   expectUpdateButtons(h, timestamp, false, false, false);
-  counter_gui::loop();
+  loop();
 }
 
 #endif

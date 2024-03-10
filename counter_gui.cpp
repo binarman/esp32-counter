@@ -147,8 +147,11 @@ void setup(HAL *hal) {
   confirm_new_count_screen.addWidget(&battery);
 }
 
-void loop() {
-  getActiveScreen()->update();
+bool update() {
+  return getActiveScreen()->update();
+}
+
+void draw() {
   getActiveScreen()->draw();
 }
 
