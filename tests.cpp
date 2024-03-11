@@ -37,18 +37,18 @@ void expectBatteryState(HAL &h, float state) {
 void expectBatteryDraw(Display &d, float state = -1) {
   const int off_x = 112;
   const int off_y = 0;
-  EXPECT_CALL(d, drawRect(off_x + 1, off_y, 15, 7, SH110X_WHITE))
+  EXPECT_CALL(d, drawRect(off_x + 1, off_y, 15, 7, Color::WHITE))
       .WillRepeatedly(Return());
-  EXPECT_CALL(d, drawFastVLine(off_x, off_y + 1, 5, SH110X_WHITE))
+  EXPECT_CALL(d, drawFastVLine(off_x, off_y + 1, 5, Color::WHITE))
       .WillRepeatedly(Return());
   if (state > 0.75 || state < 0)
-    EXPECT_CALL(d, fillRect(off_x + 3, off_y + 2, 3, 3, SH110X_WHITE))
+    EXPECT_CALL(d, fillRect(off_x + 3, off_y + 2, 3, 3, Color::WHITE))
         .WillRepeatedly(Return());
   if (state > 0.5 || state < 0)
-    EXPECT_CALL(d, fillRect(off_x + 7, off_y + 2, 3, 3, SH110X_WHITE))
+    EXPECT_CALL(d, fillRect(off_x + 7, off_y + 2, 3, 3, Color::WHITE))
         .WillRepeatedly(Return());
   if (state > 0.25 || state < 0)
-    EXPECT_CALL(d, fillRect(off_x + 11, off_y + 2, 3, 3, SH110X_WHITE))
+    EXPECT_CALL(d, fillRect(off_x + 11, off_y + 2, 3, 3, Color::WHITE))
         .WillRepeatedly(Return());
 }
 
@@ -133,17 +133,17 @@ void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2,
                                      float btn3) {
   if (btn1 >= 0)
     EXPECT_CALL(d,
-                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), SH110X_WHITE));
+                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), Color::WHITE));
   if (btn1 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(3 * 6, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(3 * 6, 61, 2 * CHAR_W, Color::WHITE));
   else if (btn1 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, Color::WHITE));
 
   if (btn2 >= 0)
     assert(false && "todo implement");
 
   if (btn3 > 0)
-    EXPECT_CALL(d, drawFastHLine(104, 61, 4 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(104, 61, 4 * CHAR_W, Color::WHITE));
 }
 
 void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2,
@@ -156,43 +156,43 @@ void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2,
 
   if (btn3 >= 0)
     EXPECT_CALL(d,
-                drawFastHLine(80, 63, (int)(btn3 * 8 * CHAR_W), SH110X_WHITE));
+                drawFastHLine(80, 63, (int)(btn3 * 8 * CHAR_W), Color::WHITE));
   if (btn3 == 1.0)
     EXPECT_CALL(d,
-                drawFastHLine(80 + 4 * CHAR_W, 61, 4 * CHAR_W, SH110X_WHITE));
+                drawFastHLine(80 + 4 * CHAR_W, 61, 4 * CHAR_W, Color::WHITE));
   else if (btn3 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(80, 61, 3 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(80, 61, 3 * CHAR_W, Color::WHITE));
 }
 
 void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2,
                                       float btn3) {
   if (btn1 >= 0)
     EXPECT_CALL(d,
-                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), SH110X_WHITE));
+                drawFastHLine(0, 63, (int)(btn1 * 5 * CHAR_W), Color::WHITE));
   if (btn1 == 1.0)
-    EXPECT_CALL(d, drawFastHLine(3 * CHAR_W, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(3 * CHAR_W, 61, 2 * CHAR_W, Color::WHITE));
   else if (btn1 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(0, 61, 2 * CHAR_W, Color::WHITE));
 
   if (btn2 >= 0)
     EXPECT_CALL(d,
-                drawFastHLine(49, 63, (int)(btn2 * 5 * CHAR_W), SH110X_WHITE));
+                drawFastHLine(49, 63, (int)(btn2 * 5 * CHAR_W), Color::WHITE));
   if (btn2 == 1.0)
     EXPECT_CALL(d,
-                drawFastHLine(49 + 3 * CHAR_W, 61, 2 * CHAR_W, SH110X_WHITE));
+                drawFastHLine(49 + 3 * CHAR_W, 61, 2 * CHAR_W, Color::WHITE));
   else if (btn2 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(49, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(49, 61, 2 * CHAR_W, Color::WHITE));
 
   if (btn3 >= 0)
     EXPECT_CALL(d,
-                drawFastHLine(86, 63, (int)(btn3 * 7 * CHAR_W), SH110X_WHITE));
+                drawFastHLine(86, 63, (int)(btn3 * 7 * CHAR_W), Color::WHITE));
   if (btn3 == 1.0)
     assert(false && "todo implement");
   else if (btn3 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(86, 61, 2 * CHAR_W, SH110X_WHITE));
+    EXPECT_CALL(d, drawFastHLine(86, 61, 2 * CHAR_W, Color::WHITE));
 }
 
-void loop(){
+void loop() {
   counter_gui::update();
   counter_gui::draw();
 }

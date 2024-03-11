@@ -7,9 +7,11 @@
 #ifdef TEST_MODE
 #include <gmock/gmock.h>
 
-constexpr int SH110X_WHITE = 1;
-constexpr int DEC = 10;
-constexpr uint8_t INPUT_PULLUP = 0xa;
+enum Color {
+  BLACK = 0,
+  WHITE = 1,
+  INVERSE = 2,
+};
 
 class Display {
 public:
@@ -41,11 +43,11 @@ class HAL {
 public:
   HAL(Display *d) : d(d) {}
 
-  Display *display() { return d; }
+  Display *display() const { return d; }
 
-  MOCK_METHOD(bool, buttonPressed, (int button_no));
-  MOCK_METHOD(unsigned long, uptimeMillis, ());
-  MOCK_METHOD(float, getPowerState, ());
+  MOCK_METHOD(bool, buttonPressed, (int button_no), (const));
+  MOCK_METHOD(unsigned long, uptimeMillis, (), (const));
+  MOCK_METHOD(float, getPowerState, (), (const));
 };
 
 #else
@@ -53,6 +55,12 @@ public:
 #include <Adafruit_SH110X.h>
 #include <algorithm>
 #include <initializer_list>
+
+enum Color {
+  BLACK = SH110X_BLACK,
+  WHITE = SH110X_WHITE,
+  INVERSE = SH110X_INVERSE,
+};
 
 using Display = Adafruit_SH1106G;
 
@@ -69,15 +77,15 @@ public:
                   [](int pin) { pinMode(pin, INPUT_PULLUP); });
   }
 
-  Display *display() { return d; }
+  Display *display() const { return d; }
 
-  bool buttonPressed(int button_no) {
+  bool buttonPressed const(int button_no) {
     return !digitalRead(button_pin[button_no]);
   }
 
-  unsigned long uptimeMillis() { return millis(); }
+  unsigned long uptimeMillis() const { return millis(); }
 
-  float getPowerState() { return (millis() % 5000) / 5000.0; }
+  float getPowerState() const { return (millis() % 5000) / 5000.0; }
 };
 
 #endif

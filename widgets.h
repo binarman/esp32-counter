@@ -60,15 +60,15 @@ public:
     return -1;
   }
 
-  int getState() { return state; }
+  int getState() const { return state; }
 
-  int getTimeFromPress() {
+  int getTimeFromPress() const {
     if (state == -1)
       return 0;
     return last_update_time - last_press_time;
   }
 
-  float getProgress() {
+  float getProgress() const {
     if (state == -1)
       return 0.0f;
     float maxTime = milestones[NUM_MILESTONES - 1];
@@ -93,13 +93,13 @@ public:
   }
 
   virtual ~Widget() = default;
-  int getX() { return off_x; }
-  int getY() { return off_y; }
-  virtual int getW() = 0;
-  virtual int getH() = 0;
+  int getX() const { return off_x; }
+  int getY() const { return off_y; }
+  virtual int getW() const = 0;
+  virtual int getH() const = 0;
   virtual void reset() = 0;
   virtual bool update() = 0;
-  virtual void draw() = 0;
+  virtual void draw() const = 0;
 };
 
 class ThreeStateButtonWidget : public Widget {
@@ -119,13 +119,13 @@ public:
     on_release = callback;
   }
 
-  int getW() override {
+  int getW() const override {
     int short_press_length = strlen(short_press_text);
     int long_press_length = strlen(long_press_text);
     return (short_press_length + long_press_length + 1) * CHAR_W;
   }
 
-  int getH() override { return CHAR_H + 3; }
+  int getH() const override { return CHAR_H + 3; }
 
   void reset() override { state.reset(); }
 
@@ -134,16 +134,17 @@ public:
     auto timestamp = hal->uptimeMillis();
     auto old_progress = state.getProgress();
     int event = state.updateState(timestamp, button_state);
-    bool state_changed = (state.getProgress() != old_progress || button_state || event > 0);
+    bool state_changed =
+        (state.getProgress() != old_progress || button_state || event > 0);
     if (event > 0)
       on_release(event);
     return state_changed;
   }
 
-  void draw() override {
+  void draw() const override {
     // draw labels
     int s = state.getState();
-    display->setTextColor(SH110X_WHITE);
+    display->setTextColor(Color::WHITE);
     int short_press_length = strlen(short_press_text) * CHAR_W;
     int long_press_length = strlen(long_press_text) * CHAR_W;
     int first_part_length = short_press_length + CHAR_W;
@@ -159,17 +160,17 @@ public:
 
     if (s == 1)
       display->drawFastHLine(off_x, off_y + CHAR_H, short_press_length,
-                             SH110X_WHITE);
+                             Color::WHITE);
     if (s == 2)
       display->drawFastHLine(off_x + first_part_length, off_y + CHAR_H,
-                             long_press_length, SH110X_WHITE);
+                             long_press_length, Color::WHITE);
     // draw progress bar
     float progress = state.getProgress();
     if (progress > 0.0f) {
       int full_length = first_part_length + long_press_length;
       int progress_bar_len = full_length * progress;
       display->drawFastHLine(off_x, off_y + CHAR_H + 2, progress_bar_len,
-                             SH110X_WHITE);
+                             Color::WHITE);
     }
   }
 };
@@ -189,12 +190,12 @@ public:
     on_release = callback;
   }
 
-  int getW() override {
+  int getW() const override {
     int press_text_length = strlen(press_text);
     return press_text_length * CHAR_W;
   }
 
-  int getH() override { return CHAR_H + 1; }
+  int getH() const override { return CHAR_H + 1; }
 
   void reset() override { state.reset(); }
 
@@ -203,21 +204,22 @@ public:
     int timestamp = hal->uptimeMillis();
     auto old_progress = state.getProgress();
     int event = state.updateState(timestamp, button_state);
-    bool state_changed = (state.getProgress() != old_progress || button_state || event > 0);
+    bool state_changed =
+        (state.getProgress() != old_progress || button_state || event > 0);
     if (event > 0)
       on_release(event);
     return state_changed;
   }
 
-  void draw() override {
+  void draw() const override {
     int s = state.getState();
-    display->setTextColor(SH110X_WHITE);
+    display->setTextColor(Color::WHITE);
     int press_text_length = strlen(press_text) * CHAR_W;
     display->setCursor(off_x, off_y);
     display->setTextSize(1);
     display->print(press_text);
     if (s == 1)
-      display->drawFastHLine(off_x, off_y + 8, press_text_length, SH110X_WHITE);
+      display->drawFastHLine(off_x, off_y + 8, press_text_length, Color::WHITE);
   }
 };
 
@@ -230,6 +232,7 @@ protected:
   bool updated = true;
 
   Derived &d() { return *static_cast<Derived *>(this); }
+  const Derived &d() const { return *static_cast<const Derived *>(this); }
 
 public:
   void setParams(int width, int height) {
@@ -254,14 +257,17 @@ public:
     }
   }
 
-  int getW() override { return w; }
+  int getW() const override { return w; }
 
-  int getH() override { return h; }
+  int getH() const override { return h; }
 
-  void reset() override { first_visible_item = 0; updated = true;}
+  void reset() override {
+    first_visible_item = 0;
+    updated = true;
+  }
 
-  void draw() override {
-    display->setTextColor(SH110X_WHITE);
+  void draw() const override {
+    display->setTextColor(Color::WHITE);
     const int size = d().getSize();
     int num_items_to_print = std::min(h / CHAR_H, size - first_visible_item);
     int max_item_width = std::min(w / CHAR_W, MAX_ITEM_LEN);
@@ -351,9 +357,9 @@ public:
     Base::updated = true;
   }
 
-  int getSize() { return size; }
+  int getSize() const { return size; }
 
-  void getItem(int i, char *buffer, int max_str_len) {
+  void getItem(int i, char *buffer, int max_str_len) const {
     assert(max_str_len > 1);
     if (i == sel_pos)
       buffer[0] = '\x1a';
@@ -424,11 +430,11 @@ public:
     updated = true;
   }
 
-  int getW() override { return w; }
+  int getW() const override { return w; }
 
-  int getH() override { return h; }
+  int getH() const override { return h; }
 
-  void reset() override {updated = true;}
+  void reset() override { updated = true; }
 
   bool update() override {
     if (updated) {
@@ -438,7 +444,7 @@ public:
     return false;
   }
 
-  void draw() override {
+  void draw() const override {
     const int str_len = strlen(value);
     if (str_len == 0)
       return;
@@ -460,7 +466,7 @@ public:
       x_alignment = w - font_size * CHAR_W * str_len;
       break;
     }
-    display->setTextColor(SH110X_WHITE);
+    display->setTextColor(Color::WHITE);
     display->setCursor(off_x + x_alignment, off_y + y_alignment);
     display->setTextSize(font_size);
     display->print(value);
@@ -473,8 +479,8 @@ class BatteryWidget : public Widget {
 public:
   void setParams() { reset(); }
 
-  int getW() override { return 16; }
-  int getH() override { return 7; }
+  int getW() const override { return 16; }
+  int getH() const override { return 7; }
   void reset() override { state = -1; }
 
   bool update() override {
@@ -493,15 +499,15 @@ public:
     return false;
   }
 
-  void draw() override {
-    display->drawRect(off_x + 1, off_y, 15, 7, SH110X_WHITE);
-    display->drawFastVLine(off_x, off_y + 1, 5, SH110X_WHITE);
+  void draw() const override {
+    display->drawRect(off_x + 1, off_y, 15, 7, Color::WHITE);
+    display->drawFastVLine(off_x, off_y + 1, 5, Color::WHITE);
     if (state > 2)
-      display->fillRect(off_x + 3, off_y + 2, 3, 3, SH110X_WHITE);
+      display->fillRect(off_x + 3, off_y + 2, 3, 3, Color::WHITE);
     if (state > 1)
-      display->fillRect(off_x + 7, off_y + 2, 3, 3, SH110X_WHITE);
+      display->fillRect(off_x + 7, off_y + 2, 3, 3, Color::WHITE);
     if (state > 0)
-      display->fillRect(off_x + 11, off_y + 2, 3, 3, SH110X_WHITE);
+      display->fillRect(off_x + 11, off_y + 2, 3, 3, Color::WHITE);
   }
 };
 
