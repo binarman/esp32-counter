@@ -474,18 +474,20 @@ public:
 };
 
 class BatteryWidget : public Widget {
-  int state = -1;
+  int state = -2;
 
 public:
   void setParams() { reset(); }
 
   int getW() const override { return 16; }
   int getH() const override { return 7; }
-  void reset() override { state = -1; }
+  void reset() override { state = -2; }
 
   bool update() override {
     float raw_state = hal->getPowerState();
     int new_state = 0;
+    if (raw_state < 0)
+      new_state = -1;
     if (raw_state > 0.25)
       new_state++;
     if (raw_state > 0.5)
@@ -500,14 +502,22 @@ public:
   }
 
   void draw() const override {
-    display->drawRect(off_x + 1, off_y, 15, 7, Color::WHITE);
-    display->drawFastVLine(off_x, off_y + 1, 5, Color::WHITE);
-    if (state > 2)
-      display->fillRect(off_x + 3, off_y + 2, 3, 3, Color::WHITE);
-    if (state > 1)
-      display->fillRect(off_x + 7, off_y + 2, 3, 3, Color::WHITE);
-    if (state > 0)
-      display->fillRect(off_x + 11, off_y + 2, 3, 3, Color::WHITE);
+    if (state == -1) {
+      display->drawFastHLine(off_x, off_y + 1, 3, Color::WHITE);
+      display->drawFastHLine(off_x, off_y + 3, 3, Color::WHITE);
+      display->drawFastHLine(off_x + 8, off_y + 2, 3, Color::WHITE);
+      display->drawRect(off_x + 3, off_y, 3, 5, Color::WHITE);
+      display->drawRect(off_x + 6, off_y + 1, 2, 3, Color::WHITE);
+    } else {
+      display->drawRect(off_x + 1, off_y, 15, 7, Color::WHITE);
+      display->drawFastVLine(off_x, off_y + 1, 5, Color::WHITE);
+      if (state > 2)
+        display->fillRect(off_x + 3, off_y + 2, 3, 3, Color::WHITE);
+      if (state > 1)
+        display->fillRect(off_x + 7, off_y + 2, 3, 3, Color::WHITE);
+      if (state > 0)
+        display->fillRect(off_x + 11, off_y + 2, 3, 3, Color::WHITE);
+    }
   }
 };
 

@@ -569,4 +569,31 @@ TEST(basic_tests, new_count) {
   loop();
 }
 
+TEST(basic_tests, battery_state) {
+  BatteryState bs;
+  const float vcc = 3.3;
+  const float bat_v = 1.4;
+  const float tolerance = 0.001;
+
+  // detecting no battery
+
+  ASSERT_NEAR(bs.convertProbeValToState(0), -1.0f, tolerance);
+
+  // detecting one battery
+  bs.init(12, vcc);
+  ASSERT_NEAR(bs.convertProbeValToState(1024), 1024.0 / 4096.0 * vcc / bat_v,
+              tolerance);
+  ASSERT_NEAR(bs.convertProbeValToState(1600), 1600.0 / 4096.0 * vcc / bat_v,
+              tolerance);
+  ASSERT_NEAR(bs.convertProbeValToState(2000), 1.0f, tolerance);
+
+  // detecting two batteries
+  bs.init(12, vcc);
+  ASSERT_NEAR(bs.convertProbeValToState(2600),
+              2600.0 / 4096.0 * vcc / (2 * bat_v), tolerance);
+  ASSERT_NEAR(bs.convertProbeValToState(3000),
+              3000.0 / 4096.0 * vcc / (2 * bat_v), tolerance);
+  ASSERT_NEAR(bs.convertProbeValToState(3500), 1.0f, tolerance);
+}
+
 #endif

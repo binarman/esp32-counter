@@ -10,13 +10,16 @@
 #define SENSOR_PIN_LEFT 12
 #define SENSOR_PIN_MIDDLE 27
 #define SENSOR_PIN_RIGHT 14
+#define BATTERY_VOLTAGE_PIN 34
 
 Adafruit_SH1106G display =
     Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-HAL hal = HAL(&display, {SENSOR_PIN_LEFT, SENSOR_PIN_MIDDLE, SENSOR_PIN_RIGHT});
+HAL hal = HAL(&display, {SENSOR_PIN_LEFT, SENSOR_PIN_MIDDLE, SENSOR_PIN_RIGHT},
+              BATTERY_VOLTAGE_PIN);
 
 void setup() {
+  setCpuFrequencyMhz(80);
   Serial.begin(9600);
   counter_gui::setup(&hal);
 
@@ -25,7 +28,6 @@ void setup() {
 
   display.display();
   delay(1000);
-  setCpuFrequencyMhz(80);
 }
 
 void loop() {

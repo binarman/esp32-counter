@@ -66,6 +66,12 @@ Each button is connected to the grond and corresponding pin on the board.
 | middle |  27  |
 | right  |  14  |
 
+#### OTHERS
+
+There are one additional pin used for battery voltage monitoring.
+
+GPIO 34 is attached to battery positive terminal.
+
 ### CMake build
 
 This build is for **debug** purposes only.
