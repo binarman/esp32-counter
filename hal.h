@@ -20,11 +20,11 @@ class BatteryState {
 public:
   BatteryState() : num_batteries(-1) {}
 
-  BatteryState(int adc_bit_width, float vcc_voltage)
-      : adc_bit_width(adc_bit_width), vcc_voltage(vcc_voltage) {
-    assert(adc_bit_width > 0 && adc_bit_width < 32);
-    assert(vcc_voltage > 0 && "VCC voltage should be positive");
-  }
+   BatteryState(int adc_bit_width, float vcc_voltage)
+       : adc_bit_width(adc_bit_width), vcc_voltage(vcc_voltage) {
+     assert(adc_bit_width > 0 && adc_bit_width < 32);
+     assert(vcc_voltage > 0 && "VCC voltage should be positive");
+   }
 
   void init(int adc_bit_width, float vcc_voltage) {
     this->adc_bit_width = adc_bit_width;

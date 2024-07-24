@@ -1,6 +1,7 @@
 #ifdef TEST_MODE
 
 #include "counter_gui.h"
+#include "screens.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -149,7 +150,7 @@ void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2,
 void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2,
                                      float btn3) {
   if (btn1 >= 0)
-    assert(false && "todo implemnet");
+    assert(false && "todo implement");
 
   if (btn2 >= 0)
     assert(false && "todo implement");
@@ -228,7 +229,7 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
   expectBatteryState(h, 0.5);
 }
 
-TEST(basic_tests, main_screen) {
+TEST(gui_test, main_screen) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -241,7 +242,7 @@ TEST(basic_tests, main_screen) {
   loop();
 }
 
-TEST(basic_tests, add_counter_plus1) {
+TEST(gui_test, add_counter_plus1) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -289,7 +290,7 @@ TEST(basic_tests, add_counter_plus1) {
   loop();
 }
 
-TEST(basic_tests, add_counter_plus1_minus5) {
+TEST(gui_test, add_counter_plus1_minus5) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -337,7 +338,7 @@ TEST(basic_tests, add_counter_plus1_minus5) {
   loop();
 }
 
-TEST(basic_tests, go_to_menu) {
+TEST(gui_test, go_to_menu) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -391,7 +392,7 @@ TEST(basic_tests, go_to_menu) {
   loop();
 }
 
-TEST(basic_tests, full_history) {
+TEST(gui_test, full_history) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -451,7 +452,7 @@ TEST(basic_tests, full_history) {
   loop();
 }
 
-TEST(basic_tests, delete_history) {
+TEST(gui_test, delete_history) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -516,7 +517,7 @@ TEST(basic_tests, delete_history) {
   loop();
 }
 
-TEST(basic_tests, new_count) {
+TEST(gui_test, new_count) {
   Display d;
   HAL h(&d);
   expectSetup(h);
@@ -569,7 +570,7 @@ TEST(basic_tests, new_count) {
   loop();
 }
 
-TEST(basic_tests, battery_state) {
+TEST(state_test, battery_state) {
   BatteryState bs;
   const float vcc = 3.3;
   const float bat_v = 1.4;
@@ -594,6 +595,72 @@ TEST(basic_tests, battery_state) {
   ASSERT_NEAR(bs.convertProbeValToState(3000),
               3000.0 / 4096.0 * vcc / (2 * bat_v), tolerance);
   ASSERT_NEAR(bs.convertProbeValToState(3500), 1.0f, tolerance);
+}
+
+TEST(widget_test, menu_wrap_navigation) {
+  Display d;
+  HAL h(&d);
+  ListWithSelectorWidget<5> list;
+  list.setParams(100, CHAR_H*4, 0);
+  list.addItem("item 0");
+  list.addItem("item 1");
+  list.addItem("item 2");
+  list.addItem("item 3");
+  list.addItem("item 4");
+  list.setPos(&h, 0, 0);
+
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  ASSERT_EQ(list.getSelPos(), 0);
+  list.moveSelDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  ASSERT_EQ(list.getSelPos(), 1);
+  list.moveSelDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  ASSERT_EQ(list.getSelPos(), 2);
+  list.moveSelDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  ASSERT_EQ(list.getSelPos(), 3);
+  list.moveSelDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  ASSERT_EQ(list.getSelPos(), 4);
+  list.moveSelDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  ASSERT_EQ(list.getSelPos(), 0);
+  list.moveSelUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  ASSERT_EQ(list.getSelPos(), 4);
+  list.moveSelUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  ASSERT_EQ(list.getSelPos(), 3);
+  list.moveSelUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  ASSERT_EQ(list.getSelPos(), 2);
+  list.moveSelUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  ASSERT_EQ(list.getSelPos(), 1);
+}
+
+TEST(widget_test, history_wrap_navigation) {
+  Display d;
+  HAL h(&d);
+  OverwritingListWidget<5> list;
+  list.setParams(100, CHAR_H*4);
+  list.addItem("item 0");
+  list.addItem("item 1");
+  list.addItem("item 2");
+  list.addItem("item 3");
+  list.addItem("item 4");
+  list.setPos(&h, 0, 0);
+
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  list.moveDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  list.moveDown();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
+  list.moveUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 1);
+  list.moveUp();
+  ASSERT_EQ(list.getFirstVisibleItem(), 0);
 }
 
 #endif

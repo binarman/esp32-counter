@@ -244,22 +244,27 @@ public:
 
   void moveDown() {
     int visible_items = h / CHAR_H;
-    if (first_visible_item < d().getSize() - visible_items) {
-      first_visible_item++;
-      updated = true;
-    }
+    int number_possible_positions = std::max(0, d().getSize() - visible_items) + 1;
+    first_visible_item = (first_visible_item + 1) % number_possible_positions;
+    updated = true;
   }
 
   void moveUp() {
     if (first_visible_item > 0) {
       first_visible_item--;
       updated = true;
+    } else {
+      int visible_items = h / CHAR_H;
+      int last_possible_positions = std::max(0, d().getSize() - visible_items);
+      first_visible_item = last_possible_positions;
     }
   }
 
   int getW() const override { return w; }
 
   int getH() const override { return h; }
+
+  int getFirstVisibleItem() const { return first_visible_item; }
 
   void reset() override {
     first_visible_item = 0;
@@ -377,24 +382,32 @@ public:
   }
 
   void adjustVisibleAreaToSel() {
-    if (sel_pos < Base::first_visible_item)
-      Base::first_visible_item = sel_pos;
+    if (sel_pos <= Base::first_visible_item)
+      Base::first_visible_item = sel_pos - 1;
+    Base::first_visible_item = std::max(Base::first_visible_item, 0);
+    const int visible_items = this->getH() / CHAR_H;
     int last_visible_item =
-        Base::first_visible_item + this->getH() / CHAR_H - 1;
-    if (sel_pos > last_visible_item)
-      Base::first_visible_item += sel_pos - last_visible_item;
+        Base::first_visible_item + visible_items - 1;
+    if (sel_pos >= last_visible_item)
+      Base::first_visible_item += sel_pos - last_visible_item + 1;
+    const int largest_first_item = std::max(size - visible_items, 0);
+    Base::first_visible_item = std::min(Base::first_visible_item, largest_first_item);
   }
 
   int getSelPos() const { return sel_pos; }
 
   void moveSelUp() {
-    sel_pos = std::max(sel_pos - 1, 0);
+    sel_pos--;
+    if (sel_pos < 0)
+      sel_pos = size - 1;
     adjustVisibleAreaToSel();
     Base::updated = true;
   }
 
   void moveSelDown() {
-    sel_pos = std::min(sel_pos + 1, size - 1);
+    sel_pos++;
+    if (sel_pos > size - 1)
+      sel_pos = 0;
     adjustVisibleAreaToSel();
     Base::updated = true;
   }
