@@ -13,18 +13,15 @@ constexpr float upper_battery_voltage = 1.7;
 // Each battery gives voltage somewhere between 1.2 and 1.5 Volts
 // All computations are very approximate
 class BatteryState {
-  int num_batteries;
   int adc_bit_width;
   float vcc_voltage;
 
 public:
-  BatteryState() : num_batteries(-1) {}
+  BatteryState() {}
 
-   BatteryState(int adc_bit_width, float vcc_voltage)
-       : adc_bit_width(adc_bit_width), vcc_voltage(vcc_voltage) {
-     assert(adc_bit_width > 0 && adc_bit_width < 32);
-     assert(vcc_voltage > 0 && "VCC voltage should be positive");
-   }
+  BatteryState(int adc_bit_width, float vcc_voltage) {
+    init(adc_bit_width, vcc_voltage);
+  }
 
   void init(int adc_bit_width, float vcc_voltage) {
     this->adc_bit_width = adc_bit_width;
