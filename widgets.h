@@ -355,6 +355,11 @@ public:
     updated = true;
   }
 
+  void scrollToBottom() {
+    int visible_items = h / CHAR_H;
+    first_visible_item = std::max(0, d().getSize() - visible_items);
+  }
+
   void moveUp() {
     if (first_visible_item > 0) {
       first_visible_item--;

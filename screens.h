@@ -98,7 +98,10 @@ public:
 
   void reset_history() { short_history.reset(); }
 
-  void addHistoryItem(const char *item) { short_history.addItem(item); }
+  void addHistoryItem(const char *item) {
+    short_history.addItem(item);
+    short_history.scrollToBottom();
+  }
 };
 
 class DeltaScreen : public Screen {

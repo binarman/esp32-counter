@@ -746,4 +746,30 @@ TEST(widget_test, repeating_button) {
   checkDraw(1402, false);
 }
 
+TEST(screen_test, main_screen_history) {
+  Display d;
+  HAL h(&d);
+  EXPECT_CALL(d, width()).WillRepeatedly(Return(128));
+  EXPECT_CALL(d, height()).WillRepeatedly(Return(64));
+  EXPECT_CALL(d, setTextColor(::testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, setTextSize(::testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, setCursor(::testing::_, testing::_)).WillRepeatedly(Return());
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 4"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 5"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 6"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 7"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 8"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("item 9"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("+1/-1"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("0"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("+5/-5"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("menu"))));
+  counter_gui::MainScreen screen;
+  screen.setup(
+      &h, [](int) {}, [](int) {}, [](int) {});
+  for (int i = 0; i < 10; ++i)
+    screen.addHistoryItem(("item " + std::to_string(i)).c_str());
+  screen.draw();
+}
+
 #endif
