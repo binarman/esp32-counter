@@ -323,7 +323,7 @@ public:
     display->setCursor(off_x, off_y);
     display->setTextSize(1);
     display->print(press_text);
-    if (s > 0)
+    if (s != -1)
       display->drawFastHLine(off_x, off_y + 8, press_text_length, Color::WHITE);
   }
 };

@@ -723,4 +723,27 @@ TEST(widget_test, history_wrap_navigation) {
   ASSERT_EQ(list.getFirstVisibleItem(), 0);
 }
 
+TEST(widget_test, repeating_button) {
+  Display d;
+  HAL h(&d);
+  RepeatingButtonWidget btn;
+  btn.setParams("test", 0 /*physical button id*/, [](int event) {});
+  btn.setPos(&h, 0, 0);
+  auto checkDraw = [&](long time, bool pressed) {
+    expectUpdateButtons(h, time, pressed, false, false);
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq("test"))));
+    EXPECT_CALL(d, setTextSize(1));
+    EXPECT_CALL(d, setTextColor(1));
+    EXPECT_CALL(d, setCursor(0, 0));
+    if (pressed)
+      EXPECT_CALL(d, drawFastHLine(0, CHAR_H, 4 * CHAR_W, Color::WHITE));
+    btn.update();
+    btn.draw();
+  };
+  checkDraw(0, false);
+  for (int time : {100, 500, 799, 800, 801, 999, 1000, 1001, 1200, 1401})
+    checkDraw(time, true);
+  checkDraw(1402, false);
+}
+
 #endif
