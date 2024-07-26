@@ -173,8 +173,8 @@ public:
 
 class MenuScreen : public Screen {
   ListWithSelectorWidget<5> menu_items;
-  TwoStateButtonWidget menu_up;
-  TwoStateButtonWidget menu_down;
+  RepeatingButtonWidget menu_up;
+  RepeatingButtonWidget menu_down;
   ThreeStateButtonWidget select_return;
 
   void menuUpRelease(int event) { menu_items.moveSelUp(); }
@@ -210,8 +210,8 @@ public:
 };
 
 class HistoryScreen : public Screen {
-  TwoStateButtonWidget history_up;
-  TwoStateButtonWidget history_down;
+  RepeatingButtonWidget history_up;
+  RepeatingButtonWidget history_down;
   TwoStateButtonWidget history_return;
   OverwritingListWidget<128> history_items;
 

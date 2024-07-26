@@ -199,7 +199,8 @@ void loop() {
 }
 
 void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
-                                        int press_time, int &timestamp) {
+                                        int iteration_time, int iterations,
+                                        int &timestamp) {
   auto &d = *h.display();
   EXPECT_CALL(d, setTextColor(::testing::_)).WillRepeatedly(Return());
   EXPECT_CALL(d, setTextSize(::testing::_)).WillRepeatedly(Return());
@@ -215,9 +216,11 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
   expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
   loop();
   // register press of required time
-  timestamp += press_time;
-  expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
-  loop();
+  for (int i = 0; i < iterations; ++i) {
+    timestamp += iteration_time;
+    expectUpdateButtons(h, timestamp, btn1, btn2, btn3);
+    loop();
+  }
   // release buttons
   timestamp += 10;
   expectUpdateButtons(h, timestamp, false, false, false);
@@ -301,7 +304,7 @@ TEST(gui_test, add_counter_plus1_minus5) {
 
   int timestamp = 321;
   // pressing the +1/-1 button
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // press +5/-5 button
   expectUpdateButtons(h, timestamp + 60, false, true, false);
@@ -408,15 +411,17 @@ TEST(gui_test, full_history) {
   int num_records = 10;
   for (int i = 0; i < num_records; ++i) {
     for (int j = 0; j < i + 1; ++j)
-      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1,
+                                         timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1,
+                                       timestamp);
   }
 
   // goto menu
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // goto history
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // check history contents
   expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4",
@@ -426,9 +431,9 @@ TEST(gui_test, full_history) {
   loop();
 
   // scroll down one item
-  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
 
-  // check scolled contents
+  // check scrolled contents
   expectHistoryScreen(d, {"2. 3=1+2", "3. 6=3+3", "4. 10=6+4", "5. 15=10+5",
                           "6. 21=15+6", "7. 28=21+7"});
   timestamp += 1;
@@ -436,7 +441,7 @@ TEST(gui_test, full_history) {
   loop();
 
   // scroll up one item
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // check history contents
   expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "4. 10=6+4",
@@ -445,8 +450,17 @@ TEST(gui_test, full_history) {
   expectUpdateButtons(h, timestamp, false, false, false);
   loop();
 
+  // scroll by continuous press
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 12, timestamp);
+  expectHistoryScreen(d, {"5. 15=10+5", "6. 21=15+6", "7. 28=21+7",
+                          "8. 36=28+8", "9. 45=36+9", "10. 55=45+10"});
+
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  loop();
+
   // go back to manu screen
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
   expectMenuScreen(d);
   expectUpdateButtons(h, timestamp, false, false, false);
   loop();
@@ -468,29 +482,31 @@ TEST(gui_test, delete_history) {
   int num_records = 10;
   for (int i = 0; i < num_records; ++i) {
     for (int j = 0; j < i + 1; ++j)
-      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1,
+                                         timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1,
+                                       timestamp);
   }
 
   // goto menu
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // goto "delete history" item
-  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
 
   // click "delete history"
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // confirm "delete history"
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // move up in menu
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // got to history
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   expectHistoryScreen(d, {});
   timestamp += 1;
@@ -498,8 +514,8 @@ TEST(gui_test, delete_history) {
   loop();
 
   // move to the menu and main screen
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, 1, timestamp);
 
   expectMainScreen(d, 0);
   timestamp += 1;
@@ -507,8 +523,8 @@ TEST(gui_test, delete_history) {
   loop();
 
   // add an item to the history
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   expectMainScreen(d, 1);
   expectMainScreenHistory(d, {"1.+1"});
@@ -533,27 +549,29 @@ TEST(gui_test, new_count) {
   int num_records = 3;
   for (int i = 0; i < num_records; ++i) {
     for (int j = 0; j < i + 1; ++j)
-      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
-    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+      pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1,
+                                         timestamp);
+    pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1,
+                                       timestamp);
   }
 
   // goto menu
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // goto "new count" item
-  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
 
   // click "new count"
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // confirm
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // move up in menu
-  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
   // got to history
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   expectHistoryScreen(d, {"1. 1=0+1", "2. 3=1+2", "3. 6=3+3", "------"});
   timestamp += 1;
@@ -561,8 +579,8 @@ TEST(gui_test, new_count) {
   loop();
 
   // move to the menu and main screen
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, 1, timestamp);
 
   expectMainScreen(d, 0);
   timestamp += 1;
@@ -597,11 +615,34 @@ TEST(state_test, battery_state) {
   ASSERT_NEAR(bs.convertProbeValToState(3500), 1.0f, tolerance);
 }
 
+TEST(state_test, repeating_button_test) {
+  RepeatingButtonState state(800, 200);
+  auto checkTimestamp = [&state](long time, bool pressed, int expectedEvent) {
+    auto event = state.updateState(time, pressed);
+    ASSERT_EQ(event, expectedEvent);
+    ASSERT_EQ(state.getState(), expectedEvent);
+  };
+
+  checkTimestamp(100, false, -1);
+  checkTimestamp(200, true, 1);
+  checkTimestamp(400, true, 0);
+  checkTimestamp(999, true, 0);
+  checkTimestamp(1000, true, 1);
+  checkTimestamp(1000, true, 0);
+  checkTimestamp(1001, true, 0);
+  checkTimestamp(1199, true, 0);
+  checkTimestamp(1200, true, 1);
+  checkTimestamp(1200, true, 0);
+  checkTimestamp(1201, true, 0);
+  checkTimestamp(1400, true, 1);
+  checkTimestamp(1600, false, -1);
+}
+
 TEST(widget_test, menu_wrap_navigation) {
   Display d;
   HAL h(&d);
   ListWithSelectorWidget<5> list;
-  list.setParams(100, CHAR_H*4, 0);
+  list.setParams(100, CHAR_H * 4, 0);
   list.addItem("item 0");
   list.addItem("item 1");
   list.addItem("item 2");
@@ -644,7 +685,7 @@ TEST(widget_test, history_wrap_navigation) {
   Display d;
   HAL h(&d);
   OverwritingListWidget<5> list;
-  list.setParams(100, CHAR_H*4);
+  list.setParams(100, CHAR_H * 4);
   list.addItem("item 0");
   list.addItem("item 1");
   list.addItem("item 2");

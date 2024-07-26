@@ -15,7 +15,7 @@
 #define MAX_WIDGETS 10
 
 /**
- * @brief abstract class controlling button state
+ * @brief abstract class controlling "multistate" button state
  *
  * Button holds several "milestone" timestamps.
  * Each milestone switches button to new state.
@@ -24,14 +24,14 @@
  * when button is pressed, but did not reach any milestone yet, it has state 0
  * each reached milestone increases state counter by 1
  */
-template <int NUM_MILESTONES> class ButtonState {
+template <int NUM_MILESTONES> class MilestoneButtonState {
   int state;
-  int last_press_time;
-  int last_update_time;
+  long last_press_time;
+  long last_update_time;
   int milestones[NUM_MILESTONES];
 
 public:
-  ButtonState(std::initializer_list<int> milestones_time)
+  MilestoneButtonState(std::initializer_list<int> milestones_time)
       : state(-1), last_press_time(0), last_update_time(0) {
     assert(milestones_time.size() == NUM_MILESTONES);
     std::copy(milestones_time.begin(), milestones_time.end(), milestones);
@@ -62,12 +62,6 @@ public:
 
   int getState() const { return state; }
 
-  int getTimeFromPress() const {
-    if (state == -1)
-      return 0;
-    return last_update_time - last_press_time;
-  }
-
   float getProgress() const {
     if (state == -1)
       return 0.0f;
@@ -75,6 +69,67 @@ public:
     float progress = (last_update_time - last_press_time) / maxTime;
     return std::min(progress, 1.0f);
   }
+};
+
+/**
+ * @brief abstract class controlling repeatadly firing button state
+ *
+ * when button is not pressed, it has state -1
+ * when button is pressed, it has state 1
+ * Releases event 1 immediately after pressed, wait for
+ * delay time and releases new events each rep_delay time
+ */
+class RepeatingButtonState {
+  int state;
+  long last_press_time;
+  long last_update_time;
+  int delay;
+  int rep_delay;
+
+public:
+  RepeatingButtonState(int delay, int rep_delay)
+      : state(-1), last_press_time(0), last_update_time(0), delay(delay),
+        rep_delay(rep_delay) {}
+
+  void reset() {
+    state = -1;
+    last_press_time = 0;
+    last_update_time = 0;
+  }
+
+  int updateState(long timestamp, bool pressed) {
+    if (!pressed)
+      return state = -1;
+    long previous_update_time = last_update_time;
+    last_update_time = timestamp;
+    switch (state) {
+    case -1:
+      last_press_time = timestamp;
+      return state = 1;
+    case 0:
+    case 1: {
+      if (previous_update_time == timestamp)
+        return state = 0;
+      long first_delay_time = last_press_time + delay;
+      if (timestamp < first_delay_time)
+        return state = 0;
+      if (first_delay_time <= timestamp &&
+          previous_update_time < first_delay_time)
+        return state = 1;
+      int previous_update_interval =
+          (previous_update_time - first_delay_time) / rep_delay;
+      int current_update_interval = (timestamp - first_delay_time) / rep_delay;
+      if (previous_update_interval != current_update_interval)
+        return state = 1;
+      return state = 0;
+    }
+    default:
+      assert(false);
+    }
+    return state = -1;
+  }
+
+  int getState() const { return state; }
 };
 
 class Widget {
@@ -106,7 +161,7 @@ class ThreeStateButtonWidget : public Widget {
   const char *short_press_text = nullptr;
   const char *long_press_text = nullptr;
   int button_id = -1;
-  ButtonState<2> state = {50, 1000};
+  MilestoneButtonState<2> state = {50, 1000};
   std::function<void(int)> on_release = nullptr;
 
 public:
@@ -178,7 +233,7 @@ public:
 class TwoStateButtonWidget : public Widget {
   const char *press_text = nullptr;
   int button_id = -1;
-  ButtonState<1> state = {50};
+  MilestoneButtonState<1> state = {50};
   std::function<void(int)> on_release = nullptr;
 
 public:
@@ -200,12 +255,12 @@ public:
   void reset() override { state.reset(); }
 
   bool update() override {
-    bool button_state = hal->buttonPressed(button_id);
+    bool button_pressed = hal->buttonPressed(button_id);
     int timestamp = hal->uptimeMillis();
     auto old_progress = state.getProgress();
-    int event = state.updateState(timestamp, button_state);
+    int event = state.updateState(timestamp, button_pressed);
     bool state_changed =
-        (state.getProgress() != old_progress || button_state || event > 0);
+        (state.getProgress() != old_progress || button_pressed || event > 0);
     if (event > 0)
       on_release(event);
     return state_changed;
@@ -219,6 +274,56 @@ public:
     display->setTextSize(1);
     display->print(press_text);
     if (s == 1)
+      display->drawFastHLine(off_x, off_y + 8, press_text_length, Color::WHITE);
+  }
+};
+
+class RepeatingButtonWidget : public Widget {
+  const char *press_text = nullptr;
+  int button_id = -1;
+  RepeatingButtonState state;
+  std::function<void(int)> on_release = nullptr;
+
+public:
+  RepeatingButtonWidget() : state(800, 200) {}
+
+  void setParams(const char *press_label, int btn_id,
+                 const std::function<void(int)> callback) {
+    press_text = press_label;
+    button_id = btn_id;
+    state.reset();
+    on_release = callback;
+  }
+
+  int getW() const override {
+    int press_text_length = strlen(press_text);
+    return press_text_length * CHAR_W;
+  }
+
+  int getH() const override { return CHAR_H + 1; }
+
+  void reset() override { state.reset(); }
+
+  bool update() override {
+    bool button_pressed = hal->buttonPressed(button_id);
+    int timestamp = hal->uptimeMillis();
+
+    int old_state = state.getState();
+    int event = state.updateState(timestamp, button_pressed);
+    bool state_changed = old_state != event || event > 0;
+    if (event > 0)
+      on_release(event);
+    return state_changed;
+  }
+
+  void draw() const override {
+    int s = state.getState();
+    display->setTextColor(Color::WHITE);
+    int press_text_length = strlen(press_text) * CHAR_W;
+    display->setCursor(off_x, off_y);
+    display->setTextSize(1);
+    display->print(press_text);
+    if (s > 0)
       display->drawFastHLine(off_x, off_y + 8, press_text_length, Color::WHITE);
   }
 };
@@ -244,7 +349,8 @@ public:
 
   void moveDown() {
     int visible_items = h / CHAR_H;
-    int number_possible_positions = std::max(0, d().getSize() - visible_items) + 1;
+    int number_possible_positions =
+        std::max(0, d().getSize() - visible_items) + 1;
     first_visible_item = (first_visible_item + 1) % number_possible_positions;
     updated = true;
   }
@@ -386,12 +492,12 @@ public:
       Base::first_visible_item = sel_pos - 1;
     Base::first_visible_item = std::max(Base::first_visible_item, 0);
     const int visible_items = this->getH() / CHAR_H;
-    int last_visible_item =
-        Base::first_visible_item + visible_items - 1;
+    int last_visible_item = Base::first_visible_item + visible_items - 1;
     if (sel_pos >= last_visible_item)
       Base::first_visible_item += sel_pos - last_visible_item + 1;
     const int largest_first_item = std::max(size - visible_items, 0);
-    Base::first_visible_item = std::min(Base::first_visible_item, largest_first_item);
+    Base::first_visible_item =
+        std::min(Base::first_visible_item, largest_first_item);
   }
 
   int getSelPos() const { return sel_pos; }
