@@ -78,18 +78,19 @@ void onItemSelect(int event) {
   if (event == 1) {
     switch (menu_screen.getSelPos()) {
     case 0:
-      pushScreen(&history_screen);
+      popScreen();
       break;
     case 1:
-      pushScreen(&confirm_new_count_screen);
+      pushScreen(&history_screen);
       break;
     case 2:
+      pushScreen(&confirm_new_count_screen);
+      break;
+    case 3:
       pushScreen(&confirm_remove_history_screen);
       break;
     }
   }
-  if (event == 2)
-    popScreen();
 }
 
 // Handler for back button on history screen and confirmation screens

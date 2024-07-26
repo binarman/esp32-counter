@@ -175,16 +175,17 @@ class MenuScreen : public Screen {
   ListWithSelectorWidget<5> menu_items;
   RepeatingButtonWidget menu_up;
   RepeatingButtonWidget menu_down;
-  ThreeStateButtonWidget select_return;
+  TwoStateButtonWidget select;
 
   void menuUpRelease(int event) { menu_items.moveSelUp(); }
 
   void menuDownRelease(int event) { menu_items.moveSelDown(); }
 
 public:
-  void setup(HAL *hal, std::function<void(int)> selectReturnRelease) {
+  void setup(HAL *hal, std::function<void(int)> selectRelease) {
     Screen::setup(hal);
     menu_items.setParams(width(), height() - lower_panel_height, 0);
+    menu_items.addItem("go to main screen");
     menu_items.addItem("show full history");
     menu_items.addItem("start new counting");
     menu_items.addItem("drop full history");
@@ -192,18 +193,17 @@ public:
                       [this](int event) { menuUpRelease(event); });
     menu_down.setParams("\x1f", MIDDLE_BUTTON_ID,
                         [this](int event) { menuDownRelease(event); });
-    select_return.setParams("sel", "back", RIGHT_BUTTON_ID,
-                            selectReturnRelease);
+    select.setParams("select", RIGHT_BUTTON_ID, selectRelease);
 
     menu_items.setPos(hal, 0, 0);
     menu_up.setPos(hal, 0, panelY());
     menu_down.setPos(hal, (width() - menu_down.getW()) / 2, panelY());
-    select_return.setPos(hal, width() - select_return.getW(), panelY());
+    select.setPos(hal, width() - select.getW(), panelY());
 
     addWidget(&menu_items);
     addWidget(&menu_up);
     addWidget(&menu_down);
-    addWidget(&select_return);
+    addWidget(&select);
   }
 
   int getSelPos() { return menu_items.getSelPos(); }

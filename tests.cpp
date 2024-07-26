@@ -97,22 +97,40 @@ void expectDeltaScreen(Display &d, int counter, int delta) {
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq(std::to_string(counter)))));
 }
 
-void expectMenuScreen(Display &d) {
+void expectMenuScreen(Display &d, int selected_item) {
   EXPECT_CALL(d, setTextColor(1)).Times(4);
   EXPECT_CALL(d, setTextSize(1)).Times(4);
   EXPECT_CALL(d, setCursor(0, 0));
   EXPECT_CALL(d, setCursor(0, CHAR_H));
   EXPECT_CALL(d, setCursor(0, CHAR_H * 2));
+  EXPECT_CALL(d, setCursor(0, CHAR_H * 3));
   EXPECT_CALL(d, setCursor(0, 53));
   EXPECT_CALL(d, setCursor(61, 53));
-  EXPECT_CALL(d, setCursor(80, 53));
-  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1ashow full history"))));
-  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" start new counting"))));
-  EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" drop full history"))));
+  EXPECT_CALL(d, setCursor(92, 53));
+  if (selected_item == 0)
+    EXPECT_CALL(d,
+                print(Matcher<const char *>(StrEq("\x1ago to main screen"))));
+  else
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" go to main screen"))));
+  if (selected_item == 1)
+    EXPECT_CALL(d,
+                print(Matcher<const char *>(StrEq("\x1ashow full history"))));
+  else
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" show full history"))));
+  if (selected_item == 2)
+    EXPECT_CALL(d,
+                print(Matcher<const char *>(StrEq("\x1astart new counting"))));
+  else
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" start new counting"))));
+  if (selected_item == 3)
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1a"
+                                                     "drop full history"))));
+  else
+    EXPECT_CALL(d, print(Matcher<const char *>(StrEq(" drop full history"))));
 
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1e"))));
   EXPECT_CALL(d, print(Matcher<const char *>(StrEq("\x1f"))));
-  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("sel/back"))));
+  EXPECT_CALL(d, print(Matcher<const char *>(StrEq("select"))));
 }
 
 void expectHistoryScreen(Display &d, const std::vector<std::string> &entries) {
@@ -147,22 +165,16 @@ void expectMainScreenButtonAnimation(Display &d, float btn1, float btn2,
     EXPECT_CALL(d, drawFastHLine(104, 61, 4 * CHAR_W, Color::WHITE));
 }
 
-void expectMenuScreenButtonAnimation(Display &d, float btn1, float btn2,
-                                     float btn3) {
-  if (btn1 >= 0)
+void expectMenuScreenButtonAnimation(Display &d, bool btn1, bool btn2,
+                                     bool btn3) {
+  if (btn1)
     assert(false && "todo implement");
 
-  if (btn2 >= 0)
+  if (btn2)
     assert(false && "todo implement");
 
-  if (btn3 >= 0)
-    EXPECT_CALL(d,
-                drawFastHLine(80, 63, (int)(btn3 * 8 * CHAR_W), Color::WHITE));
-  if (btn3 == 1.0)
-    EXPECT_CALL(d,
-                drawFastHLine(80 + 4 * CHAR_W, 61, 4 * CHAR_W, Color::WHITE));
-  else if (btn3 >= 0.05)
-    EXPECT_CALL(d, drawFastHLine(80, 61, 3 * CHAR_W, Color::WHITE));
+  if (btn3)
+    EXPECT_CALL(d, drawFastHLine(92, 61, (int)(6 * CHAR_W), Color::WHITE));
 }
 
 void expectDeltaScreenButtonAnimation(Display &d, float btn1, float btn2,
@@ -368,24 +380,24 @@ TEST(gui_test, go_to_menu) {
 
   // release the menu button
   expectUpdateButtons(h, start_time + 60, false, false, false);
-  expectMenuScreen(d);
-  expectMenuScreenButtonAnimation(d, -1, -1, -1);
+  expectMenuScreen(d, 0);
+  expectMenuScreenButtonAnimation(d, false, false, false);
   loop();
 
   // press back button
   expectUpdateButtons(h, start_time + 70, false, false, true);
-  expectMenuScreen(d);
-  expectMenuScreenButtonAnimation(d, -1, -1, -1);
+  expectMenuScreen(d, 0);
+  expectMenuScreenButtonAnimation(d, false, false, false);
   loop();
 
   expectUpdateButtons(h, start_time + 70 + 50, false, false, true);
-  expectMenuScreen(d);
-  expectMenuScreenButtonAnimation(d, -1, -1, 0.05);
+  expectMenuScreen(d, 0);
+  expectMenuScreenButtonAnimation(d, false, false, true);
   loop();
 
   expectUpdateButtons(h, start_time + 70 + 50 + 1000, false, false, true);
-  expectMenuScreen(d);
-  expectMenuScreenButtonAnimation(d, -1, -1, 1);
+  expectMenuScreen(d, 0);
+  expectMenuScreenButtonAnimation(d, false, false, true);
   loop();
 
   // release back button
@@ -420,7 +432,10 @@ TEST(gui_test, full_history) {
   // goto menu
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
-  // goto history
+  // goto history item
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
+
+  // goto history menu
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   // check history contents
@@ -461,7 +476,7 @@ TEST(gui_test, full_history) {
 
   // go back to manu screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
-  expectMenuScreen(d);
+  expectMenuScreen(d, 1);
   expectUpdateButtons(h, timestamp, false, false, false);
   loop();
 }
@@ -494,6 +509,7 @@ TEST(gui_test, delete_history) {
   // goto "delete history" item
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
 
   // click "delete history"
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
@@ -501,7 +517,7 @@ TEST(gui_test, delete_history) {
   // confirm "delete history"
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
-  // move up in menu
+  // move up in menu to history item
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
   pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
 
@@ -515,7 +531,8 @@ TEST(gui_test, delete_history) {
 
   // move to the menu and main screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   expectMainScreen(d, 0);
   timestamp += 1;
@@ -560,6 +577,7 @@ TEST(gui_test, new_count) {
 
   // goto "new count" item
   pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
 
   // click "new count"
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
@@ -580,7 +598,8 @@ TEST(gui_test, new_count) {
 
   // move to the menu and main screen
   pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
-  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 1000, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, true, false, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
 
   expectMainScreen(d, 0);
   timestamp += 1;
