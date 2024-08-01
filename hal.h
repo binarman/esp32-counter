@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <functional>
 
 constexpr float average_battery_voltage = 1.4;
 constexpr float upper_battery_voltage = 1.7;
@@ -46,6 +47,56 @@ public:
 };
 
 #ifdef TEST_MODE
+#include <memory>
+
+class PersistentMemory {
+  std::unique_ptr<uint8_t[]> data;
+  bool valid;
+
+public:
+  PersistentMemory(bool valid, int size)
+      : data(new uint8_t[size]), valid(valid) {}
+
+  bool begin() const { return valid; }
+
+  uint8_t read(int addr) const { return data[addr]; }
+
+  void write(int addr, uint8_t value) { data[addr] = value; }
+};
+
+#else // TEST_MODE
+#include "Adafruit_FRAM_I2C.h"
+
+using PersistentMemory = Adafruit_FRAM_I2C;
+
+#endif // TEST_MODE
+
+class PersistentMemoryWrapper {
+private:
+  PersistentMemory *raw_mem;
+  bool valid;
+  int mem_size;
+
+public:
+  PersistentMemoryWrapper(PersistentMemory *raw_mem, int size)
+      : raw_mem(raw_mem), mem_size(size), valid(false) {}
+
+  void setup() {
+    if (raw_mem->begin())
+      valid = true;
+  }
+
+  bool isValid() const { return valid; }
+
+  int size() const { return mem_size; }
+
+  uint8_t read(int addr) const { return raw_mem->read(addr); }
+
+  void write(int addr, uint8_t value) { raw_mem->write(addr, value); }
+};
+
+#ifdef TEST_MODE
+
 #include <gmock/gmock.h>
 
 enum Color {
@@ -80,18 +131,21 @@ public:
 
 class HAL {
   Display *d;
+  PersistentMemoryWrapper *mem;
 
 public:
-  HAL(Display *d) : d(d) {}
+  HAL(Display *d, PersistentMemoryWrapper *mem) : d(d), mem(mem) {}
 
   Display *display() const { return d; }
+
+  PersistentMemoryWrapper *persistentMemory() const { return mem; }
 
   MOCK_METHOD(bool, buttonPressed, (int button_no), (const));
   MOCK_METHOD(unsigned long, uptimeMillis, (), (const));
   MOCK_METHOD(float, getPowerState, (), (const));
 };
 
-#else
+#else // TEST_MODE
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <algorithm>
@@ -109,19 +163,23 @@ constexpr int MAX_BUTTONS = 3;
 
 class HAL {
   Display *d;
+  PersistentMemoryWrapper *mem;
   int button_pin[MAX_BUTTONS];
   int power_probe_pin;
   BatteryState bs;
 
 public:
-  HAL(Display *d, std::initializer_list<int> button_pins, int power_probe_pin)
-      : d(d), power_probe_pin(power_probe_pin), bs(12, 3.3f) {
+  HAL(Display *d, PersistentMemoryWrapper *mem,
+      std::initializer_list<int> button_pins, int power_probe_pin)
+      : d(d), mem(mem), power_probe_pin(power_probe_pin), bs(12, 3.3f) {
     std::copy(button_pins.begin(), button_pins.end(), button_pin);
     std::for_each(button_pins.begin(), button_pins.end(),
                   [](int pin) { pinMode(pin, INPUT_PULLUP); });
   }
 
   Display *display() const { return d; }
+
+  PersistentMemoryWrapper *persistentMemory() const { return mem; }
 
   bool buttonPressed(int button_no) const {
     return !digitalRead(button_pin[button_no]);
@@ -135,6 +193,6 @@ public:
   }
 };
 
-#endif
+#endif // TEST_MODE
 
 #endif // HAL_H

@@ -1,5 +1,6 @@
 #include "counter_gui.h"
 #include "screens.h"
+#include "state.h"
 #include "widgets.h"
 #include <cstdio>
 
@@ -8,6 +9,8 @@
 namespace counter_gui {
 
 namespace {
+
+PersistentState saved_state;
 
 BatteryWidget battery;
 
@@ -28,31 +31,49 @@ void pushScreen(Screen *s) { screen[++active_screen] = s; }
 Screen *getActiveScreen() { return screen[active_screen]; }
 void popScreen() { active_screen--; }
 
+void changeCounter(int new_value, int delta) {
+  int old_value = new_value - delta;
+  // update short history
+  short_history_counter++;
+  char history_item[MAX_HIST_STR_LEN + 1];
+  char sign = delta >= 0 ? '+' : '-';
+  snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", short_history_counter,
+           sign, std::abs(delta));
+  main_screen.addHistoryItem(history_item);
+
+  // update full history
+  global_history_counter++;
+  snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d",
+           global_history_counter, new_value, old_value, sign, std::abs(delta));
+  history_screen.addHistoryItem(history_item);
+
+  main_screen.setCounter(new_value);
+}
+
+void startNewCounting() {
+  history_screen.addHistoryItem("------");
+  short_history_counter = 0;
+  main_screen.setCounter(0);
+  main_screen.reset_history();
+}
+
+void clearHistory() {
+  startNewCounting();
+  history_screen.clearHistory();
+  global_history_counter = 0;
+}
+
 // callbacks moving between screens
 
 // Handler for ok/drop button on delta screen
 void onCommitRejectDelta(int event) {
   popScreen();
   if (event == 1) {
-    // update short history
-    short_history_counter++;
-    char history_item[MAX_HIST_STR_LEN + 1];
-    const int delta_value = delta_screen.getDelta();
-    char sign = delta_value >= 0 ? '+' : '-';
-    snprintf(history_item, MAX_HIST_STR_LEN, "%d.%c%d", short_history_counter,
-             sign, std::abs(delta_value));
-    main_screen.addHistoryItem(history_item);
-
-    // update full history
-    global_history_counter++;
     const int counter_value = main_screen.getCounter();
+    const int delta_value = delta_screen.getDelta();
     int new_counter_value = counter_value + delta_value;
-    snprintf(history_item, MAX_HIST_STR_LEN, "%d. %d=%d%c%d",
-             global_history_counter, new_counter_value, counter_value, sign,
-             std::abs(delta_value));
-    history_screen.addHistoryItem(history_item);
-
-    main_screen.setCounter(new_counter_value);
+    saved_state.rememberNewValue(new_counter_value);
+    changeCounter(new_counter_value, delta_value);
   }
 }
 
@@ -96,23 +117,16 @@ void onItemSelect(int event) {
 // Handler for back button on history screen and confirmation screens
 void onReturn(int event) { popScreen(); }
 
-void startNewCounting() {
-  short_history_counter = 0;
-  main_screen.setCounter(0);
-  main_screen.reset_history();
-}
-
 // Handler for confirm button confirm_remove_history screen
 void onDeleteHistoryConfirmation(int event) {
-  history_screen.clearHistory();
-  global_history_counter = 0;
-  startNewCounting();
+  saved_state.rememberClearHistory();
+  clearHistory();
   popScreen();
 }
 
 // Handler for confirm button confirm_new_count screen
 void onNewCountConfirmation(int event) {
-  history_screen.addHistoryItem("------");
+  saved_state.rememberStartNewCount();
   startNewCounting();
   popScreen();
 }
@@ -146,6 +160,9 @@ void setup(HAL *hal) {
   history_screen.addWidget(&battery);
   confirm_remove_history_screen.addWidget(&battery);
   confirm_new_count_screen.addWidget(&battery);
+
+  saved_state.setup(hal->persistentMemory());
+  saved_state.restoreFromMem(changeCounter, clearHistory, startNewCounting);
 }
 
 bool update() { return getActiveScreen()->update(); }

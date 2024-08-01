@@ -5,8 +5,8 @@ project(esp32-counter)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(SRC tests.cpp counter_gui.cpp hal.cpp)
-set(HDR counter_gui.h screens.h widgets.h hal.h)
+set(SRC tests.cpp counter_gui.cpp hal.cpp state.cpp)
+set(HDR counter_gui.h screens.h widgets.h hal.h state.h)
 
 find_package(GTest REQUIRED)
 

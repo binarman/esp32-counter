@@ -2,6 +2,7 @@
 
 #include "counter_gui.h"
 #include "screens.h"
+#include "state.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -246,7 +247,9 @@ void pressAndReleaseButtonsIgnoreOutput(HAL &h, bool btn1, bool btn2, bool btn3,
 
 TEST(gui_test, main_screen) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -259,7 +262,9 @@ TEST(gui_test, main_screen) {
 
 TEST(gui_test, add_counter_plus1) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -307,7 +312,9 @@ TEST(gui_test, add_counter_plus1) {
 
 TEST(gui_test, add_counter_plus1_minus5) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -355,7 +362,9 @@ TEST(gui_test, add_counter_plus1_minus5) {
 
 TEST(gui_test, go_to_menu) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -409,7 +418,9 @@ TEST(gui_test, go_to_menu) {
 
 TEST(gui_test, full_history) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -483,7 +494,9 @@ TEST(gui_test, full_history) {
 
 TEST(gui_test, delete_history) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -552,7 +565,9 @@ TEST(gui_test, delete_history) {
 
 TEST(gui_test, new_count) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   expectSetup(h);
   counter_gui::setup(&h);
 
@@ -657,9 +672,72 @@ TEST(state_test, repeating_button_test) {
   checkTimestamp(1600, false, -1);
 }
 
+TEST(state_test, persisten_state_test) {
+  PersistentMemory raw_mem(true, 32);
+  PersistentMemoryWrapper mem(&raw_mem, 32);
+  mem.setup();
+  PersistentState s1(&mem);
+  s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+  for (int i = 0; i < 5; ++i)
+    s1.rememberNewValue(1 << i);
+  s1.rememberStartNewCount();
+  s1.rememberStartNewCount();
+  s1.rememberNewValue(32);
+  s1.rememberClearHistory();
+  PersistentState s2(&mem);
+  int sum = 0;
+  int new_counts = 0;
+  int resets = 0;
+  s2.restoreFromMem([&](int value, int delta) { sum += value; },
+                    [&]() { resets++; }, [&]() { new_counts++; });
+  ASSERT_EQ(sum, 63);
+  ASSERT_EQ(new_counts, 2);
+  ASSERT_EQ(resets, 1);
+}
+
+TEST(state_test, persisten_state_overflow_test) {
+  PersistentMemory raw_mem(true, 16);
+  PersistentMemoryWrapper mem(&raw_mem, 16);
+  mem.setup();
+  PersistentState s1(&mem);
+  s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+  for (int i = 0; i < 10; ++i)
+    s1.rememberNewValue(1 << i);
+  PersistentState s2(&mem);
+  int sum = 0;
+  int new_counts = 0;
+  int resets = 0;
+  s2.restoreFromMem([&](int value, int delta) { sum += value; },
+                    [&]() { resets++; }, [&]() { new_counts++; });
+  ASSERT_EQ(sum, 992);
+  ASSERT_EQ(new_counts, 0);
+  ASSERT_EQ(resets, 0);
+}
+
+TEST(state_test, invalid_persisten_state_test) {
+  PersistentMemory raw_mem(false, 32);
+  PersistentMemoryWrapper mem(&raw_mem, 32);
+  mem.setup();
+  PersistentState s1(&mem);
+  s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+  for (int i = 0; i < 5; ++i)
+    s1.rememberNewValue(1 << i);
+  s1.rememberStartNewCount();
+  s1.rememberClearHistory();
+  s1.rememberNewValue(32);
+  PersistentState s2(&mem);
+  s2.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+}
+
 TEST(widget_test, menu_wrap_navigation) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   ListWithSelectorWidget<5> list;
   list.setParams(100, CHAR_H * 4, 0);
   list.addItem("item 0");
@@ -702,7 +780,9 @@ TEST(widget_test, menu_wrap_navigation) {
 
 TEST(widget_test, history_wrap_navigation) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   OverwritingListWidget<5> list;
   list.setParams(100, CHAR_H * 4);
   list.addItem("item 0");
@@ -725,7 +805,9 @@ TEST(widget_test, history_wrap_navigation) {
 
 TEST(widget_test, repeating_button) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   RepeatingButtonWidget btn;
   btn.setParams("test", 0 /*physical button id*/, [](int event) {});
   btn.setPos(&h, 0, 0);
@@ -748,7 +830,9 @@ TEST(widget_test, repeating_button) {
 
 TEST(screen_test, main_screen_history) {
   Display d;
-  HAL h(&d);
+  PersistentMemory pm(true, 1024);
+  PersistentMemoryWrapper mem(&pm, 1024);
+  HAL h(&d, &mem);
   EXPECT_CALL(d, width()).WillRepeatedly(Return(128));
   EXPECT_CALL(d, height()).WillRepeatedly(Return(64));
   EXPECT_CALL(d, setTextColor(::testing::_)).WillRepeatedly(Return());

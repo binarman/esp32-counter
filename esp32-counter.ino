@@ -7,20 +7,21 @@
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 
-#define SENSOR_PIN_LEFT 12
-#define SENSOR_PIN_MIDDLE 27
-#define SENSOR_PIN_RIGHT 14
-#define BATTERY_VOLTAGE_PIN 34
+#define LEFT_BTN_PIN 12
+#define MID_BTN_PIN 27
+#define RIGHT_BTN_PIN 14
+#define POWER_PIN 34
 
-Adafruit_SH1106G display =
-    Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-HAL hal = HAL(&display, {SENSOR_PIN_LEFT, SENSOR_PIN_MIDDLE, SENSOR_PIN_RIGHT},
-              BATTERY_VOLTAGE_PIN);
+Adafruit_FRAM_I2C raw_mem;
+PersistentMemoryWrapper mem(&raw_mem, 1 << 15);
+HAL hal(&display, &mem, {LEFT_BTN_PIN, MID_BTN_PIN, RIGHT_BTN_PIN}, POWER_PIN);
 
 void setup() {
   setCpuFrequencyMhz(80);
   Serial.begin(9600);
+  mem.setup();
   counter_gui::setup(&hal);
 
   delay(250);
