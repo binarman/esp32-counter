@@ -18,6 +18,7 @@ void PersistentState::restoreFromMem(std::function<void(int, int)> onChange,
     // mem is in inconsistent state, initialize with zeros
     for (int i = 0; i < buffer_size; ++i)
       mem->write(i, 0);
+    sequence_end = 0;
     return;
   }
   assert(sequence_end >= 0 && sequence_end < buffer_size);
@@ -63,6 +64,7 @@ void PersistentState::restoreFromMem(std::function<void(int, int)> onChange,
  */
 void PersistentState::eraseCommands(int offset, int repeats) {
   int buffer_size = mem->size();
+  assert(offset >= 0 && offset < buffer_size);
   for (int i = 0; i < repeats; ++i) {
     int rep_offset = (offset + 1) % buffer_size;
     switch (mem->read(rep_offset)) {
@@ -86,6 +88,7 @@ void PersistentState::rememberNewValue(int value) {
   if (!mem->isValid())
     return;
   int buffer_size = mem->size();
+  assert(sequence_end >= 0 && sequence_end < buffer_size);
   eraseCommands(sequence_end + 1, 3);
   mem->write(sequence_end, 1);
   mem->write((sequence_end + 1) % buffer_size, value & 0xff);
@@ -97,6 +100,7 @@ void PersistentState::rememberClearHistory() {
   if (!mem->isValid())
     return;
   int buffer_size = mem->size();
+  assert(sequence_end >= 0 && sequence_end < buffer_size);
   eraseCommands(sequence_end + 1);
   mem->write(sequence_end, 2);
   sequence_end = (sequence_end + 1) % buffer_size;
@@ -106,6 +110,7 @@ void PersistentState::rememberStartNewCount() {
   if (!mem->isValid())
     return;
   int buffer_size = mem->size();
+  assert(sequence_end >= 0 && sequence_end < buffer_size);
   eraseCommands(sequence_end + 1);
   mem->write(sequence_end, 3);
   sequence_end = (sequence_end + 1) % buffer_size;

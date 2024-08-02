@@ -16,5 +16,8 @@ add_executable(counter_tests ${SRC})
 target_compile_definitions(counter_tests PUBLIC TEST_MODE)
 target_link_libraries(counter_tests gtest gmock gmock_main)
 
+target_compile_options(counter_tests PRIVATE -fsanitize=address)
+target_link_options(counter_tests PRIVATE -fsanitize=address)
+
 include(GoogleTest)
 gtest_discover_tests(counter_tests)
