@@ -5,7 +5,9 @@
 
 class PersistentState {
   PersistentMemoryWrapper *mem = nullptr;
-  int sequence_end;
+  int sequence_end = 0;
+
+  void putEndMark(int offset);
 
 public:
   PersistentState() = default;
@@ -16,12 +18,6 @@ public:
   void restoreFromMem(std::function<void(int, int)> onChange,
                       std::function<void()> onClearHistory,
                       std::function<void()> onNewCount);
-
-  /**
-   * @param offset first offset to clear
-   * @param repeats minimum number of bytest to clear
-   */
-  void eraseCommands(int offset, int repeats = 1);
 
   void rememberNewValue(int value);
 

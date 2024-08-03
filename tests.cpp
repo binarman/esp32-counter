@@ -492,6 +492,32 @@ TEST(gui_test, full_history) {
   loop();
 }
 
+TEST(gui_test, restoring_history) {
+  Display d;
+  PersistentMemory pm(true, 32);
+  PersistentMemoryWrapper mem(&pm, 32);
+  PersistentState s(&mem);
+  mem.setup();
+  s.rememberNewValue(1);
+  s.rememberClearHistory();
+  s.rememberStartNewCount();
+  s.rememberNewValue(2);
+  HAL h(&d, &mem);
+  expectSetup(h);
+  counter_gui::setup(&h);
+  expectBatteryDraw(d);
+  expectBatteryState(h, 0.5);
+
+  int timestamp = 0;
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, true, false, 100, 1, timestamp);
+  pressAndReleaseButtonsIgnoreOutput(h, false, false, true, 100, 1, timestamp);
+  expectHistoryScreen(d, {"------", "1. 2=0+2"});
+  timestamp += 1;
+  expectUpdateButtons(h, timestamp, false, false, false);
+  loop();
+}
+
 TEST(gui_test, delete_history) {
   Display d;
   PersistentMemory pm(true, 1024);
@@ -672,7 +698,7 @@ TEST(state_test, repeating_button_test) {
   checkTimestamp(1600, false, -1);
 }
 
-TEST(state_test, persisten_state_test) {
+TEST(state_test, persisten_state_test1) {
   PersistentMemory raw_mem(true, 32);
   PersistentMemoryWrapper mem(&raw_mem, 32);
   mem.setup();
@@ -696,24 +722,94 @@ TEST(state_test, persisten_state_test) {
   ASSERT_EQ(resets, 1);
 }
 
-TEST(state_test, persisten_state_overflow_test) {
+TEST(state_test, persisten_state_test2) {
   PersistentMemory raw_mem(true, 16);
   PersistentMemoryWrapper mem(&raw_mem, 16);
   mem.setup();
   PersistentState s1(&mem);
+  // add some garbage
+  mem.write(0, 5);
+  mem.write(1, 25);
+  mem.write(2, 16);
   s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
                     []() { FAIL(); });
-  for (int i = 0; i < 10; ++i)
-    s1.rememberNewValue(1 << i);
+  s1.rememberNewValue(7);
+  s1.rememberNewValue(12);
+  s1.rememberClearHistory();
+  s1.rememberStartNewCount();
+  s1.rememberNewValue(13);
+  s1.rememberStartNewCount();
   PersistentState s2(&mem);
   int sum = 0;
   int new_counts = 0;
   int resets = 0;
   s2.restoreFromMem([&](int value, int delta) { sum += value; },
                     [&]() { resets++; }, [&]() { new_counts++; });
-  ASSERT_EQ(sum, 992);
-  ASSERT_EQ(new_counts, 0);
-  ASSERT_EQ(resets, 0);
+  ASSERT_EQ(sum, 32);
+  ASSERT_EQ(new_counts, 2);
+  ASSERT_EQ(resets, 1);
+}
+
+TEST(state_test, persisten_state_end_spoiling_test) {
+  PersistentMemory raw_mem(true, 16);
+  PersistentMemoryWrapper mem(&raw_mem, 16);
+  mem.setup();
+  PersistentState s(&mem);
+  s.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                   []() { FAIL(); });
+  s.rememberNewValue(1);
+  s.restoreFromMem([](int, int) {}, []() { FAIL(); }, []() { FAIL(); });
+  s.rememberStartNewCount();
+  int value = 0;
+  s.restoreFromMem([&](int v, int) { value = v; }, []() { FAIL(); }, []() {});
+  ASSERT_EQ(value, 1);
+}
+
+TEST(state_test, persisten_state_overflow_test1) {
+  PersistentMemory raw_mem(true, 16);
+  PersistentMemoryWrapper mem(&raw_mem, 16);
+  mem.setup();
+  PersistentState s1(&mem);
+  s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+  for (int repeat = 0; repeat < 16; ++repeat) {
+    for (int i = 0; i < 10; ++i)
+      s1.rememberNewValue(1 << i);
+    PersistentState s2(&mem);
+    int sum = 0;
+    int new_counts = 0;
+    int resets = 0;
+    s2.restoreFromMem([&](int value, int delta) { sum += value; },
+                      [&]() { resets++; }, [&]() { new_counts++; });
+    ASSERT_EQ(sum, 960);
+    ASSERT_EQ(new_counts, 0);
+    ASSERT_EQ(resets, 0);
+  }
+}
+
+TEST(state_test, persisten_state_overflow_test2) {
+  PersistentMemory raw_mem(true, 16);
+  PersistentMemoryWrapper mem(&raw_mem, 16);
+  mem.setup();
+  PersistentState s1(&mem);
+  s1.restoreFromMem([](int, int) { FAIL(); }, []() { FAIL(); },
+                    []() { FAIL(); });
+  for (int repeat = 0; repeat < 16; ++repeat) {
+    s1.rememberClearHistory();
+    s1.rememberStartNewCount();
+    for (int i = 0; i < 3; ++i)
+      s1.rememberNewValue(1 << i);
+    s1.rememberStartNewCount();
+    PersistentState s2(&mem);
+    int sum = 0;
+    int new_counts = 0;
+    int resets = 0;
+    s2.restoreFromMem([&](int value, int delta) { sum += value; },
+                      [&]() { resets++; }, [&]() { new_counts++; });
+    ASSERT_EQ(sum, 7);
+    ASSERT_GE(new_counts, 2);
+    ASSERT_EQ(resets, 1);
+  }
 }
 
 TEST(state_test, invalid_persisten_state_test) {

@@ -55,7 +55,9 @@ class PersistentMemory {
 
 public:
   PersistentMemory(bool valid, int size)
-      : data(new uint8_t[size]), valid(valid) {}
+      : data(new uint8_t[size]), valid(valid) {
+    std::fill(data.get(), data.get() + size, 0);
+  }
 
   bool begin() const { return valid; }
 
