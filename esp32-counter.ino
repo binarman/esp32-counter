@@ -11,11 +11,12 @@
 #define MID_BTN_PIN 27
 #define RIGHT_BTN_PIN 14
 #define POWER_PIN 34
+#define STORAGE_SIZE (1 << 10)
 
 Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 Adafruit_FRAM_I2C raw_mem;
-PersistentMemoryWrapper mem(&raw_mem, 1 << 15);
+PersistentMemoryWrapper mem(&raw_mem, STORAGE_SIZE);
 HAL hal(&display, &mem, {LEFT_BTN_PIN, MID_BTN_PIN, RIGHT_BTN_PIN}, POWER_PIN);
 
 void setup() {
