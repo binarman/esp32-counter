@@ -6,11 +6,14 @@ It could be used to count damage, hp, magical points, etc.
 This digital counter tracks history and automates addition, reducing human-error factor.
 
 To build a counter you need:
-- esp32 board (I've used esp32-Wrover module)
+- esp32 board (checked with esp32-Wrover module)
 - 3 press buttons
-- 128x64 OLED display (i've used a display based on SH1106G driver)
+- I2C 128x64 OLED display (checked with display based on SH1106G driver)
+- Optional I2C FRAM module (checked with MB85RC256 breakout board)
 
 Other hardware is possible, but may require some hacking(see `hal.h` and `esp32-counter.ino` files).
+
+FRAM module is optional. If not connected counter state and history will not be saved when power is removed.
 
 ## GUI
 
@@ -41,15 +44,20 @@ This is a release build for hardware.
 Dependencies:
 - ESP32 board support in arduino IDE
 - https://github.com/adafruit/Adafruit_SH110X
+- https://github.com/adafruit/Adafruit_FRAM_I2C
 
-### How do I hook up my board?
+### How do I hook up my board with ESP32-WROVER?
 
-Pinouts below are for esp32-Wrover board.
-If other board is used, need to check it's pinout documentation.
-
-#### LCD
+#### Display
 
 | OLED Pin | GPIO |
+| -------- | ---- |
+| SDA      |  21  |
+| CLK      |  22  |
+
+#### FRAM
+
+| FRAM Pin | GPIO |
 | -------- | ---- |
 | SDA      |  21  |
 | CLK      |  22  |
@@ -72,6 +80,10 @@ There are one additional pin used for battery voltage monitoring.
 
 GPIO 34 is attached to battery positive terminal.
 
+### How do I hook up my board with other hardware?
+
+Need to modify defines in `esp32-counter.ino` file and hardware specific libraries in `hal.h`.
+
 ### CMake build
 
 This build is for **debug** purposes only.
@@ -89,9 +101,10 @@ make
 
 ## SW Architecture
 
-Counter contains four modules:
+Counter contains five modules:
 
 - `widgets`: contains implemnetation of simple graphical elements, such as labels, item lists, button state representation, etc.;
 - `screens`: contains implementation of screen, described below;
 - `counter_gui`: contains logic that glues screens together. I.e. defines functions switching between screens and controls counter state and history.
+- `state`: containes hardware independent algorithms for saving and restoring of counter state in persistent memory.
 - `hal` + `esp32-counter.ino`: contains hardware specific stuff, like mapping between buttons and hardware pins, low-level hardware functions, etc.
